@@ -30,7 +30,7 @@ export default defineNuxtConfig({
         registerType: 'autoUpdate',
         manifest: {
             name: 'REPLOG',
-            short_name: 'RL',
+            short_name: 'REPLOG',
             description: 'Dein Workout-Tagebuch',
             theme_color: '#171717',
             background_color: '#171717',
