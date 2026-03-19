@@ -10,6 +10,13 @@ export default defineNuxtConfig({
     ssr: false,
     app: {
         baseURL,
+        head: {
+            link: [
+                { rel: 'icon', type: 'image/x-icon', href: `${baseURL}favicon.ico` },
+                { rel: 'shortcut icon', type: 'image/x-icon', href: `${baseURL}favicon.ico` },
+                { rel: 'apple-touch-icon', href: `${baseURL}icons/icon-192x192.png` },
+            ],
+        },
     },
     vite: {
         plugins: [
