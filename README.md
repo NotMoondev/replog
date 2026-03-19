@@ -1,6 +1,6 @@
 # RepLog
 
-RepLog ist eine progressive Web-App zum Erfassen und Auswerten von Trainingseinheiten. Alle Daten werden lokal im Browser gespeichert -- kein Account, kein Server, keine Cloud.
+RepLog ist eine progressive Web-App zum Erfassen und Auswerten von Trainingseinheiten. Alle Daten werden lokal im Browser gespeichert - kein Account, kein Server, keine Cloud.
 
 ## Features
 
@@ -39,7 +39,7 @@ RepLog ist eine progressive Web-App zum Erfassen und Auswerten von Trainingseinh
 **PWA**
 - Installierbar als native App auf Desktop und Mobilgeraeten
 - Vollstaendig offline nutzbar
-- Kein Backend erforderlich -- alle Daten liegen in IndexedDB des Browsers
+- Kein Backend erforderlich - alle Daten liegen in IndexedDB des Browsers
 
 ## Tech Stack
 
@@ -98,7 +98,7 @@ Beitraege sind willkommen. Bitte halte dich an folgende Punkte:
 **Workflow**
 1. Das Repository forken
 2. Einen Feature-Branch erstellen (`git checkout -b feature/mein-feature`)
-3. Aenderungen committen -- Commit-Messages auf Englisch, praegnant und im Imperativ (`Add exercise reorder functionality`)
+3. Aenderungen committen - Commit-Messages auf Englisch, praegnant und im Imperativ (`Add exercise reorder functionality`)
 4. Den Branch pushen und einen Pull Request gegen `main` eroeffnen
 5. Im PR beschreiben, was geaendert wurde und warum
 
@@ -106,10 +106,14 @@ Beitraege sind willkommen. Bitte halte dich an folgende Punkte:
 - Neue Seiten kommen nach `app/pages/`, neue Komponenten nach `app/components/`
 - Datenbankzugriffe laufen ausschliesslich ueber die Stores in `app/stores/`; Komponenten greifen nicht direkt auf `db` zu
 - Typen gehoeren nach `app/types/`
-- Die Datenbank-Schemaversionierung in `app/utils/db.ts` beachten -- bei Schemaänderungen eine neue Version anlegen, keine bestehende veraendern
+- Die Datenbank-Schemaversionierung in `app/utils/db.ts` beachten - bei Schemaänderungen eine neue Version anlegen, keine bestehende veraendern
 - SSR ist deaktiviert; browser-spezifische APIs (IndexedDB, `crypto.randomUUID`) koennen direkt verwendet werden
 
 **Bugs und Feature-Requests**
 Bitte als GitHub Issue einreichen und dabei beschreiben, welches Verhalten erwartet wird und welches tatsaechlich auftritt.
 
+Mit dem Einreichen von Beiträgen erklärst du dich damit einverstanden, dass dein Code unter der GPL v3.0 Lizenz veröffentlicht wird.
 
+## License
+
+Dieses Projekt steht unter der GNU General Public License v3.0 (GPLv3).
