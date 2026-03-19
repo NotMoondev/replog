@@ -1,9 +1,16 @@
 import tailwindcss from "@tailwindcss/vite";
 
+const rawBaseURL = (globalThis as { process?: { env?: Record<string, string | undefined> } })
+    .process?.env?.NUXT_APP_BASE_URL ?? "/";
+const baseURL = `/${rawBaseURL.replace(/^\/+|\/+$/g, "")}/`.replace("//", "/");
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
     compatibilityDate: '2025-07-15',
     ssr: false,
+    app: {
+        baseURL,
+    },
     vite: {
         plugins: [
             tailwindcss()
@@ -11,15 +18,18 @@ export default defineNuxtConfig({
     },
     modules: ["@pinia/nuxt", "nuxt-lucide-icons", "@vite-pwa/nuxt"],
     pwa: {
+        base: baseURL,
         registerType: 'autoUpdate',
         manifest: {
-            name: 'RepLog',
-            short_name: 'RepLog',
+            name: 'REPLOG',
+            short_name: 'RL',
             description: 'Dein Workout-Tagebuch',
             theme_color: '#171717',
             background_color: '#171717',
             display: 'standalone',
             orientation: 'portrait',
+            start_url: baseURL,
+            scope: baseURL,
             icons: [
                 {
                     src: 'icons/icon-192x192.png',
@@ -40,7 +50,7 @@ export default defineNuxtConfig({
             ],
         },
         workbox: {
-            navigateFallback: '/',
+            navigateFallback: baseURL,
             globPatterns: ['**/*.{js,css,html,png,svg,ico,woff,woff2}'],
         },
         devOptions: {
