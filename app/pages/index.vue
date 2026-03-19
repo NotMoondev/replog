@@ -43,17 +43,14 @@ async function createWorkout() {
     <div class="min-h-screen bg-bg text-text p-4 space-y-6">
         <!-- Header -->
         <div class="flex justify-between items-center">
-            <div class="space-y-1">
-            <h1 class="text-2xl font-semibold">Heute</h1>
-            <p class="text-text-muted text-sm capitalize">{{ today }}</p>
-            </div>
-            <div class="absolute left-1/2 transform -translate-x-1/2">
-            <h3 id="app-logo" class="font-black italic text-4xl">REPLOG</h3>
+            <div class="">
+                <h3 id="app-logo" class="font-black italic text-3xl">REPLOG</h3>
+                <p class="text-text-muted text-sm capitalize">{{ today }}</p>
             </div>
             <div class="flex items-center gap-3">
-            <NuxtLink to="/settings" class="text-text-muted hover:text-text">
-                <IconSettings class="w-6 h-6" />
-            </NuxtLink>
+                <NuxtLink to="/settings" class="text-text-muted hover:text-text">
+                    <IconSettings class="w-6 h-6" />
+                </NuxtLink>
             </div>
         </div>
 
@@ -76,10 +73,8 @@ async function createWorkout() {
                     <div class="font-medium">{{ todayWorkout.name }}</div>
                     <div class="text-xs text-text-muted">{{ todayWorkout.exercises.length }} Übungen</div>
                 </div>
-                <NuxtLink
-                    :to="`/session/${todayWorkout.id}`"
-                    class="block w-full bg-primary-500 hover:bg-primary-600 text-white text-center rounded-xl py-2.5 font-medium transition"
-                >
+                <NuxtLink :to="`/session/${todayWorkout.id}`"
+                    class="block w-full bg-primary-500 hover:bg-primary-600 text-white text-center rounded-xl py-2.5 font-medium transition">
                     Training starten
                 </NuxtLink>
             </div>
@@ -156,4 +151,3 @@ async function createWorkout() {
         </div>
     </div>
 </template>
-
