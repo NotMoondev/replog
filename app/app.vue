@@ -8,6 +8,7 @@ useHead({
 </script>
 
 <template>
+    <VitePwaManifest />
     <NuxtLayout>
         <NuxtPage></NuxtPage>
     </NuxtLayout>

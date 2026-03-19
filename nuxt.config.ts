@@ -26,6 +26,7 @@ export default defineNuxtConfig({
     modules: ["@pinia/nuxt", "nuxt-lucide-icons", "@vite-pwa/nuxt"],
     pwa: {
         base: baseURL,
+        scope: baseURL,
         registerType: 'autoUpdate',
         manifest: {
             name: 'REPLOG',
@@ -37,16 +38,38 @@ export default defineNuxtConfig({
             orientation: 'portrait',
             start_url: baseURL,
             scope: baseURL,
-            icons: [
+            categories: ['fitness', 'productivity'],
+            screenshots: [
                 {
-                    src: 'icons/icon-192x192.png',
-                    sizes: '192x192',
-                    type: 'image/png',
+                    src: 'screenshot-645x1398.webp',
+                    sizes: '645x1398',
+                    type: 'image/webp',
                 },
                 {
                     src: 'icons/icon-512x512.png',
                     sizes: '512x512',
                     type: 'image/png',
+                    form_factor: 'wide',
+                },
+            ],
+            icons: [
+                {
+                    src: 'icons/icon-192x192.png',
+                    sizes: '192x192',
+                    type: 'image/png',
+                    purpose: 'any',
+                },
+                {
+                    src: 'icons/icon-512x512.png',
+                    sizes: '512x512',
+                    type: 'image/png',
+                    purpose: 'any',
+                },
+                {
+                    src: 'icons/icon-192x192.png',
+                    sizes: '192x192',
+                    type: 'image/png',
+                    purpose: 'maskable',
                 },
                 {
                     src: 'icons/icon-512x512.png',
@@ -63,7 +86,12 @@ export default defineNuxtConfig({
         devOptions: {
             enabled: true,
             type: 'module',
+            },
+        client: {
+            installPrompt: true,
+            periodicSyncForUpdates: 3600,
         },
+        registerWebManifestInRouteRules: true,
     },
     css: ['~/assets/main.css'],
     devtools: { enabled: false },
