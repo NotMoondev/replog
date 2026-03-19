@@ -24,7 +24,7 @@ function goBack() {
         <header class="flex items-center justify-between bg-card border-b border-border px-4 py-3 shadow-sm" v-if="route.path !== '/'">
             <button v-if="route.path !== '/'" @click="goBack"
                 class="text-primary-500 hover:text-primary-400 flex items-center gap-1 w-20">
-                <IconArrowLeft :size="32" class="text-white" />
+                <IconArrowLeft class="text-white size-7" />
             </button>
 
             <div class="text-lg font-semibold text-center flex-1">
@@ -33,7 +33,7 @@ function goBack() {
 
             <!-- Settings Icon -->
             <div class="w-20 flex justify-end">
-                <NuxtLink to="/settings" class="text-text-muted hover:text-text">
+                <NuxtLink to="/settings" class="text-text-muted hover:text-text" v-if="route.path !== '/settings'">
                     <IconSettings class="w-6 h-6" />
                 </NuxtLink>
             </div>
