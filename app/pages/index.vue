@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useWorkoutStore } from '~/stores/useWorkoutStore'
+import { useTrainingPlanStore } from '~/stores/useTrainingPlanStore'
 import { useRouter } from 'vue-router'
 
 const store = useWorkoutStore()
+const planStore = useTrainingPlanStore()
 const router = useRouter()
+
 const today = computed(() => {
     return new Date().toLocaleDateString('de-DE', {
         weekday: 'long',
@@ -13,10 +16,16 @@ const today = computed(() => {
     })
 })
 
+const todayWorkout = computed(() => {
+    const wid = planStore.todayWorkoutId
+    if (!wid) return null
+    return store.workouts.find(w => w.id === wid) ?? null
+})
+
 const newWorkoutName = ref('')
 
-onMounted(() => {
-    store.loadWorkouts()
+onMounted(async () => {
+    await Promise.all([store.loadWorkouts(), planStore.loadPlans()])
 })
 
 async function createWorkout() {
@@ -26,8 +35,6 @@ async function createWorkout() {
     await store.createWorkout(trimmed)
     const created = store.workouts[store.workouts.length - 1]
     newWorkoutName.value = ''
-
-    // Direkt zum Workout Detail navigieren
     router.push(`/workouts/${created?.id}`)
 }
 </script>
@@ -37,16 +44,56 @@ async function createWorkout() {
         <!-- Header -->
         <div class="flex justify-between items-center">
             <div class="space-y-1">
-                <h1 class="text-2xl font-semibold">Heute</h1>
-                <p class="text-text-muted text-sm capitalize">{{ today }}</p>
+            <h1 class="text-2xl font-semibold">Heute</h1>
+            <p class="text-text-muted text-sm capitalize">{{ today }}</p>
             </div>
-            <h3 id="app-logo" class="font-black italic text-3xl">REPLOG</h3>
+            <div class="absolute left-1/2 transform -translate-x-1/2">
+            <h3 id="app-logo" class="font-black italic text-4xl">REPLOG</h3>
+            </div>
+            <div class="flex items-center gap-3">
+            <NuxtLink to="/settings" class="text-text-muted hover:text-text">
+                <IconSettings class="w-6 h-6" />
+            </NuxtLink>
+            </div>
+        </div>
+
+        <!-- Today's Training Card -->
+        <div class="bg-card border border-border rounded-2xl p-4 space-y-3 shadow-sm">
+            <h2 class="text-sm text-text-muted font-medium">Heutiges Training</h2>
+
+            <div v-if="!planStore.activePlan" class="text-sm text-text-muted">
+                Kein Trainingsplan aktiv.
+                <NuxtLink to="/plan" class="text-primary-400 hover:underline">Plan erstellen</NuxtLink>
+            </div>
+
+            <div v-else-if="planStore.todayIsRestDay" class="flex items-center gap-2 text-text-muted">
+                <IconBedDouble class="w-5 h-5" />
+                <span class="text-sm">Ruhetag — erhole dich gut!</span>
+            </div>
+
+            <div v-else-if="todayWorkout" class="space-y-3">
+                <div>
+                    <div class="font-medium">{{ todayWorkout.name }}</div>
+                    <div class="text-xs text-text-muted">{{ todayWorkout.exercises.length }} Übungen</div>
+                </div>
+                <NuxtLink
+                    :to="`/session/${todayWorkout.id}`"
+                    class="block w-full bg-primary-500 hover:bg-primary-600 text-white text-center rounded-xl py-2.5 font-medium transition"
+                >
+                    Training starten
+                </NuxtLink>
+            </div>
+
+            <div v-else class="text-sm text-text-muted">
+                Kein Workout für heute eingetragen.
+                <NuxtLink to="/plan" class="text-primary-400 hover:underline">Plan bearbeiten</NuxtLink>
+            </div>
         </div>
 
         <!-- Quick Navigation Cards -->
         <div class="grid gap-3">
             <NuxtLink to="/workouts"
-                class="bg-card border border-border rounded-2xl p-4 hover:bg-neutral-800 transition flex items-center gap-2">
+                class="bg-card border border-border rounded-2xl p-4 hover:bg-neutral-800 transition flex items-center gap-3">
                 <IconDumbbell class="w-5 h-5 text-primary-400" />
                 <div>
                     <div class="text-base font-medium">Workouts</div>
@@ -55,25 +102,25 @@ async function createWorkout() {
             </NuxtLink>
 
             <NuxtLink to="/plan"
-                class="bg-card border border-border rounded-2xl p-4 opacity-60 flex items-center gap-2">
-                <IconCalendar class="w-5 h-5 text-text-muted" />
+                class="bg-card border border-border rounded-2xl p-4 hover:bg-neutral-800 transition flex items-center gap-3">
+                <IconCalendar class="w-5 h-5 text-primary-400" />
                 <div>
                     <div class="text-base font-medium">Trainingsplan</div>
-                    <div class="text-sm text-text-muted">Bald verfügbar</div>
+                    <div class="text-sm text-text-muted">Wochenplan bearbeiten</div>
                 </div>
             </NuxtLink>
 
             <NuxtLink to="/stats"
-                class="bg-card border border-border rounded-2xl p-4 opacity-60 flex items-center gap-2">
-                <IconBarChart2 class="w-5 h-5 text-text-muted" />
+                class="bg-card border border-border rounded-2xl p-4 hover:bg-neutral-800 transition flex items-center gap-3">
+                <IconBarChart2 class="w-5 h-5 text-primary-400" />
                 <div>
                     <div class="text-base font-medium">Statistiken</div>
-                    <div class="text-sm text-text-muted">Bald verfügbar</div>
+                    <div class="text-sm text-text-muted">Fortschritt ansehen</div>
                 </div>
             </NuxtLink>
         </div>
 
-        <!-- Heutiges Workout / Quick Create -->
+        <!-- Quick Workout Create -->
         <div class="bg-card border border-border rounded-2xl p-4 space-y-3 shadow-sm">
             <h2 class="text-sm text-text-muted font-medium">Workout erstellen</h2>
 
@@ -87,7 +134,7 @@ async function createWorkout() {
             </div>
         </div>
 
-        <!-- Mini Übersicht der letzten Workouts -->
+        <!-- Recent Workouts -->
         <div class="bg-card border border-border rounded-2xl p-4 space-y-2">
             <h2 class="text-sm text-text-muted">Letzte Workouts</h2>
 
@@ -109,3 +156,4 @@ async function createWorkout() {
         </div>
     </div>
 </template>
+

@@ -35,9 +35,17 @@ onMounted(() => {
                 <ExerciseCard v-for="ex in workout.exercises" :key="ex.id" :exercise="ex" />
             </div>
 
-            <!-- Add Button -->
+            <!-- Start + Add Buttons -->
+            <NuxtLink
+                :to="`/session/${workout.id}`"
+                class="w-full bg-primary-500 hover:bg-primary-600 rounded-2xl py-3 font-medium text-center flex items-center justify-center gap-2"
+            >
+                <IconPlay class="w-5 h-5" />
+                Workout starten
+            </NuxtLink>
+
             <button @click="showModal = true"
-                class="w-full bg-primary-500 hover:bg-primary-600 rounded-2xl py-3 font-medium">
+                class="w-full bg-neutral-700 hover:bg-neutral-600 rounded-2xl py-3 font-medium">
                 + Übung hinzufügen
             </button>
 

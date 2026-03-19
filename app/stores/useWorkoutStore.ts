@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
-import { db } from '~~/server/db'
-import type { Workout } from '~~/types/workout'
+import { toRaw } from 'vue'
+import { db } from '~/utils/db'
+import type { Workout, Exercise } from '~/types/workout'
 
 export const useWorkoutStore = defineStore('workouts', {
     state: () => ({
@@ -32,13 +33,14 @@ export const useWorkoutStore = defineStore('workouts', {
             this.workouts = this.workouts.filter(w => w.id !== id)
         },
 
-        async addExercise(workoutId: string, exercise: any) {
+        async addExercise(workoutId: string, exercise: Exercise) {
             const workout = this.workouts.find(w => w.id === workoutId)
             if (!workout) return
 
             workout.exercises.push(exercise)
 
-            await db.workouts.put(workout)
+            // JSON-Roundtrip entfernt alle Vue-Proxy-Wrapper auf allen Ebenen (exercises, sets, …)
+            await db.workouts.put(JSON.parse(JSON.stringify(toRaw(workout))))
         }
     },
 })

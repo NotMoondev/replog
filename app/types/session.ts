@@ -7,7 +7,7 @@ export interface WorkoutSessionExercise {
     }[]
 
     duration?: number
-    intensity?: number
+    metricValue?: number
 }
 
 export interface WorkoutSession {
