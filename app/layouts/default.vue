@@ -8,6 +8,8 @@ const routeTitle = computed(() => {
     if (route.path.startsWith('/workouts')) return 'Workouts'
     if (route.path.startsWith('/plan')) return 'Trainingsplan'
     if (route.path.startsWith('/stats')) return 'Statistiken'
+    if (route.path.startsWith('/session')) return 'Training'
+    if (route.path.startsWith('/settings')) return 'Einstellungen'
     return 'Start'
 })
 
@@ -29,8 +31,12 @@ function goBack() {
                 {{ routeTitle }}
             </div>
 
-            <!-- Platzhalter für Right Actions -->
-            <div class="w-20"></div>
+            <!-- Settings Icon -->
+            <div class="w-20 flex justify-end">
+                <NuxtLink to="/settings" class="text-text-muted hover:text-text">
+                    <IconSettings class="w-6 h-6" />
+                </NuxtLink>
+            </div>
         </header>
 
         <!-- Page Content -->

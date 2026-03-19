@@ -19,7 +19,8 @@ const sets = ref<Array<{ reps?: number; weight?: number }>>([
 
 /* Cardio */
 const duration = ref<number | undefined>()
-const intensity = ref<number | undefined>()
+const metric = ref<'intensity' | 'speed' | 'none'>('none')
+const metricValue = ref<number | undefined>()
 
 async function save() {
     if (!name.value) return
@@ -38,8 +39,9 @@ async function save() {
             id: crypto.randomUUID(),
             type: 'cardio',
             name: name.value,
-            duration: duration.value,
-            intensity: intensity.value,
+            duration: duration.value ?? 0,
+            metric: metric.value,
+            metricValue: metric.value !== 'none' ? metricValue.value : undefined,
         }
     }
 
@@ -50,7 +52,7 @@ async function save() {
 </script>
 
 <template>
-    <div class="fixed inset-0 bg-black/50 flex items-end">
+    <div class="fixed inset-0 bg-black/50 flex items-end" @click.self="emit('close')">
         <div class="w-full bg-card rounded-t-3xl p-6 space-y-4">
             <!-- Header -->
             <div class="flex justify-between items-center">
@@ -85,36 +87,52 @@ async function save() {
             <hr class="h-1 border-none bg-linear-to-r from-neutral-800 via-neutral-700 to-neutral-800">
 
             <!-- Strength Form -->
-            <div v-if="type === 'strength'" class="space-y-2 flex flex-col mb-6">
+            <div v-if="type === 'strength'" class="space-y-3 flex flex-col mb-6">
                 <div class="flex flex-col overflow-y-auto max-h-96 space-y-2">
-                    <div v-for="(set, i) in sets" :key="i" class="flex gap-2 items-center w-fit">
+                    <div v-for="(set, i) in sets" :key="i" class="flex gap-2 items-center">
 
-                        <div class="flex items-center bg-neutral-700 p-3 gap-2 rounded">
-                            <button class="border-r border-r-neutral-500 pr-2" @click="sets.splice(i, 1)">
-                                <IconTrash2 class="size-5" />
-                            </button>
-                            <span class="whitespace-nowrap">Set {{ i + 1 }}</span>
-                        </div>
+                        <span class="text-sm text-neutral-200 shrink-0 text-center bg-neutral-700 py-3.5 px-3 rounded-lg whitespace-nowrap">SET {{ i + 1 }}</span>
 
                         <input v-model.number="set.reps" type="number" placeholder="Reps"
-                        class="bg-neutral-600 rounded-lg p-3 w-full" />
+                            class="bg-neutral-600 rounded-lg p-3 w-full" />
 
                         <input v-model.number="set.weight" type="number" placeholder="kg"
-                        class="bg-neutral-600 rounded-lg p-3 w-full" />
+                            class="bg-neutral-600 rounded-lg p-3 w-full" />
+
+                        <button @click="sets.splice(i, 1)" class="shrink-0 text-neutral-400 hover:text-red-400 p-2">
+                            <IconTrash2 class="size-5" />
+                        </button>
                     </div>
                 </div>
 
-                <button @click="sets.push({ reps: undefined, weight: undefined })" class="text-primary-400 self-end">
-                    + Set
+                <button @click="sets.push({ reps: undefined, weight: undefined })"
+                    class="w-full border border-dashed border-neutral-600 text-neutral-400 hover:text-primary-400 hover:border-primary-500 rounded-lg py-2 text-sm transition-colors">
+                    + Set hinzufügen
                 </button>
             </div>
 
             <!-- Cardio Form -->
-            <div v-if="type === 'cardio'" class="space-y-2 flex flex-col mb-6 overflow-y-auto max-h-96">
+            <div v-if="type === 'cardio'" class="space-y-3 flex flex-col mb-6 overflow-y-auto max-h-96">
                 <input v-model.number="duration" type="number" placeholder="Dauer (Sekunden)"
                     class="w-full bg-neutral-600 rounded-lg p-3" />
 
-                <input v-model.number="intensity" type="number" placeholder="Intensität"
+                <div class="flex gap-2">
+                    <button @click="metric = 'none'" :class="[
+                        'flex-1 py-2 rounded text-sm',
+                        metric === 'none' ? 'bg-primary-500 text-white' : 'bg-neutral-700'
+                    ]">Kein Metric</button>
+                    <button @click="metric = 'intensity'" :class="[
+                        'flex-1 py-2 rounded text-sm',
+                        metric === 'intensity' ? 'bg-primary-500 text-white' : 'bg-neutral-700'
+                    ]">Intensität</button>
+                    <button @click="metric = 'speed'" :class="[
+                        'flex-1 py-2 rounded text-sm',
+                        metric === 'speed' ? 'bg-primary-500 text-white' : 'bg-neutral-700'
+                    ]">Geschw. (km/h)</button>
+                </div>
+
+                <input v-if="metric !== 'none'" v-model.number="metricValue" type="number"
+                    :placeholder="metric === 'intensity' ? 'Intensität' : 'Geschwindigkeit (km/h)'"
                     class="w-full bg-neutral-600 rounded-lg p-3" />
             </div>
 

@@ -19,7 +19,8 @@ export interface CardioExercise {
     type: 'cardio'
     name: string
     duration: number // in seconds
-    intensity?: number // optional scale (z.B. 1-10)
+    metric: 'intensity' | 'speed' | 'none'
+    metricValue?: number
 }
 
 export interface Workout {
