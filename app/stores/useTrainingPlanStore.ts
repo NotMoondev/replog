@@ -53,12 +53,15 @@ export const useTrainingPlanStore = defineStore('trainingPlans', {
             }
             await db.trainingPlans.add(plan)
             this.plans.push(plan)
+            useToast().addToast(`"${name}" erstellt`)
             return plan
         },
 
         async deletePlan(id: string) {
+            const plan = this.plans.find(p => p.id === id)
             await db.trainingPlans.delete(id)
             this.plans = this.plans.filter(p => p.id !== id)
+            if (plan) useToast().addToast(`"${plan.name}" gelöscht`, 'info')
         },
 
         async setActivePlan(id: string) {
@@ -66,6 +69,8 @@ export const useTrainingPlanStore = defineStore('trainingPlans', {
                 plan.isActive = plan.id === id
                 await db.trainingPlans.put(JSON.parse(JSON.stringify(toRaw(plan))))
             }
+            const activated = this.plans.find(p => p.id === id)
+            if (activated) useToast().addToast(`"${activated.name}" aktiviert`)
         },
 
         async updateDay(planId: string, weekday: number, data: Partial<TrainingDay>) {
@@ -83,6 +88,7 @@ export const useTrainingPlanStore = defineStore('trainingPlans', {
             if (!plan) return
             plan.name = name
             await db.trainingPlans.put(JSON.parse(JSON.stringify(toRaw(plan))))
+            useToast().addToast('Plan umbenannt')
         },
     },
 })

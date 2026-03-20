@@ -32,6 +32,7 @@ export const useSessionStore = defineStore('sessions', {
             }
             await db.sessions.add(session)
             this.sessions.push(session)
+            useToast().addToast('Session gespeichert 💪')
             return session
         },
     },

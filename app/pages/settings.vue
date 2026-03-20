@@ -1,20 +1,16 @@
 <script setup lang="ts">
 import { exportAllData, importAllData } from '~/utils/exportImport'
 
+const { addToast } = useToast()
 const importing = ref(false)
-const statusMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 
 async function handleExport() {
-    statusMessage.value = null
     try {
         await exportAllData()
-        statusMessage.value = { type: 'success', text: 'Export erfolgreich!' }
+        addToast('Export erfolgreich!')
     } catch (e) {
-        statusMessage.value = {
-            type: 'error',
-            text: `Fehler beim Export: ${e instanceof Error ? e.message : String(e)}`,
-        }
+        addToast(`Export fehlgeschlagen: ${e instanceof Error ? e.message : String(e)}`, 'error')
     }
 }
 
@@ -33,18 +29,11 @@ async function handleImport(event: Event) {
     if (!confirmed) return
 
     importing.value = true
-    statusMessage.value = null
     try {
         await importAllData(file)
-        statusMessage.value = {
-            type: 'success',
-            text: 'Import erfolgreich! Daten wurden wiederhergestellt.',
-        }
+        addToast('Import erfolgreich! Daten wurden wiederhergestellt.')
     } catch (e) {
-        statusMessage.value = {
-            type: 'error',
-            text: `Fehler beim Import: ${e instanceof Error ? e.message : String(e)}`,
-        }
+        addToast(`Import fehlgeschlagen: ${e instanceof Error ? e.message : String(e)}`, 'error')
     } finally {
         importing.value = false
     }
@@ -67,41 +56,31 @@ async function handleImport(event: Event) {
             <div class="space-y-3">
                 <button
                     @click="handleExport"
-                    class="w-full flex items-center justify-center gap-2 bg-neutral-700 hover:bg-neutral-600 text-white rounded-xl py-3 font-medium transition"
+                    class="w-full flex items-center justify-center gap-2 bg-neutral-800 hover:bg-neutral-700 text-text rounded-xl py-3 font-semibold text-sm transition-colors"
                 >
-                    <IconDownload class="w-5 h-5" />
+                    <IconDownload class="size-5" />
                     Daten exportieren
                 </button>
 
                 <button
                     @click="triggerImport"
                     :disabled="importing"
-                    class="w-full flex items-center justify-center gap-2 bg-neutral-700 hover:bg-neutral-600 disabled:opacity-50 text-white rounded-xl py-3 font-medium transition"
+                    class="w-full flex items-center justify-center gap-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-40 text-text rounded-xl py-3 font-semibold text-sm transition-colors"
                 >
-                    <IconLoaderCircle v-if="importing" class="w-5 h-5 animate-spin" />
-                    <IconUpload v-else class="w-5 h-5" />
+                    <IconLoaderCircle v-if="importing" class="size-5 animate-spin" />
+                    <IconUpload v-else class="size-5" />
                     Daten importieren
                 </button>
 
                 <input ref="fileInput" type="file" accept=".json" class="hidden" @change="handleImport" />
             </div>
 
-            <!-- Status message -->
-            <div
-                v-if="statusMessage"
-                class="rounded-xl p-3 text-sm"
-                :class="statusMessage.type === 'success'
-                    ? 'bg-green-900/40 text-green-300'
-                    : 'bg-red-900/40 text-red-300'"
-            >
-                {{ statusMessage.text }}
-            </div>
-
             <!-- Warning note -->
-            <div class="bg-neutral-800 rounded-xl p-3 text-xs text-text-muted space-y-1">
-                <p class="font-medium text-text">⚠️ Hinweis zum Import</p>
-                <p>Beim Importieren werden alle vorhandenen Daten unwiderruflich überschrieben. Mache vorher einen Export als Backup.</p>
+            <div class="flex items-start gap-2 pt-1">
+                <IconAlertTriangle class="size-3.5 text-text-muted shrink-0 mt-0.5" />
+                <p class="text-xs text-text-muted">Beim Importieren werden alle vorhandenen Daten unwiderruflich überschrieben. Mache vorher einen Export als Backup.</p>
             </div>
         </div>
     </div>
 </template>
+

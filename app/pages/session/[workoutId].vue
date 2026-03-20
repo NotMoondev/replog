@@ -29,10 +29,45 @@ const localData = ref<LocalExercise[]>([])
 const lastSession = ref<Awaited<ReturnType<typeof sessionStore.getLastSessionForWorkout>>>(null)
 const saving = ref(false)
 
+// Leave guard
+const showLeaveDialog = ref(false)
+const leaveConfirmed = ref(false)
+let pendingRoute: string | null = null
+
+onBeforeRouteLeave((to) => {
+    if (!leaveConfirmed.value && doneCount.value > 0) {
+        showLeaveDialog.value = true
+        pendingRoute = to.fullPath
+        return false
+    }
+})
+
+function handleBeforeUnload(e: BeforeUnloadEvent) {
+    if (doneCount.value > 0) {
+        e.preventDefault()
+        e.returnValue = ''
+    }
+}
+
+function confirmLeave() {
+    leaveConfirmed.value = true
+    showLeaveDialog.value = false
+    if (pendingRoute) {
+        router.push(pendingRoute)
+    } else {
+        router.back()
+    }
+}
+
 onMounted(async () => {
+    window.addEventListener('beforeunload', handleBeforeUnload)
     await workoutStore.loadWorkouts()
     lastSession.value = await sessionStore.getLastSessionForWorkout(workoutId.value)
     initLocalData()
+})
+
+onUnmounted(() => {
+    window.removeEventListener('beforeunload', handleBeforeUnload)
 })
 
 watch(workout, () => {
@@ -42,11 +77,16 @@ watch(workout, () => {
 function initLocalData() {
     if (!workout.value) return
     localData.value = workout.value.exercises.map(ex => {
+        const lastEx = lastSession.value?.exercises.find(e => e.exerciseId === ex.id)
         if (ex.type === 'strength') {
             return {
                 exerciseId: ex.id,
                 completed: false,
-                sets: ex.sets.map(() => ({ reps: undefined, weight: undefined, completed: false })),
+                sets: ex.sets.map((_, i) => ({
+                    reps: lastEx?.sets?.[i]?.reps ?? undefined,
+                    weight: lastEx?.sets?.[i]?.weight ?? undefined,
+                    completed: false,
+                })),
                 duration: undefined,
                 metricValue: undefined,
             }
@@ -55,8 +95,8 @@ function initLocalData() {
                 exerciseId: ex.id,
                 completed: false,
                 sets: [],
-                duration: undefined,
-                metricValue: undefined,
+                duration: lastEx?.duration ?? undefined,
+                metricValue: lastEx?.metricValue ?? undefined,
             }
         }
     })
@@ -108,6 +148,7 @@ async function finish() {
                 }
             }
         })
+    leaveConfirmed.value = true
     await sessionStore.completeSession(workoutId.value, exercises)
     saving.value = false
     router.back()
@@ -145,11 +186,36 @@ async function finish() {
             <button
                 @click="finish"
                 :disabled="saving || doneCount === 0"
-                class="w-full bg-primary-500 hover:bg-primary-600 disabled:opacity-40 text-white rounded-2xl py-3 font-medium transition flex items-center justify-center gap-2"
+                class="w-full bg-primary-500 hover:bg-primary-600 disabled:opacity-40 text-white rounded-xl py-3 font-semibold text-sm transition-colors flex items-center justify-center gap-2"
             >
                 <IconLoaderCircle v-if="saving" class="size-4 animate-spin" />
                 Session abschließen
             </button>
         </template>
+
+        <!-- Leave warning dialog -->
+        <Teleport to="body">
+            <div v-if="showLeaveDialog" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                <div class="bg-card border border-border rounded-2xl p-6 space-y-4 max-w-sm w-full">
+                    <h3 class="font-semibold text-lg">Training verlassen?</h3>
+                    <p class="text-sm text-text-muted">Nicht gespeicherte Fortschritte gehen verloren.</p>
+                    <div class="flex gap-3">
+                        <button
+                            @click="showLeaveDialog = false"
+                            class="flex-1 bg-neutral-800 hover:bg-neutral-700 rounded-xl py-2.5 font-semibold text-sm transition-colors"
+                        >
+                            Weitertrainieren
+                        </button>
+                        <button
+                            @click="confirmLeave"
+                            class="flex-1 bg-red-600 hover:bg-red-700 text-white rounded-xl py-2.5 font-semibold text-sm transition-colors"
+                        >
+                            Verlassen
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
     </div>
 </template>
+

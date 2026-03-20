@@ -68,7 +68,7 @@ async function setWorkout(weekday: number, workoutId: string) {
                         <select
                             :value="getDayData(weekday - 1).workoutId ?? ''"
                             @change="setWorkout(weekday - 1, ($event.target as HTMLSelectElement).value)"
-                            class="w-full bg-neutral-600 rounded-lg p-2 text-sm outline-none"
+                            class="w-full bg-neutral-800 border border-border rounded-xl px-3 py-2.5 text-sm outline-none appearance-none focus:border-primary-500 transition-colors cursor-pointer"
                         >
                             <option value="">Workout wählen...</option>
                             <option
