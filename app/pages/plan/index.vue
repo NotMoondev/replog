@@ -4,6 +4,7 @@ import { useTrainingPlanStore } from '~/stores/useTrainingPlanStore'
 const store = useTrainingPlanStore()
 const router = useRouter()
 const newPlanName = ref('')
+const confirmingDeleteId = ref<string | null>(null)
 
 onMounted(() => {
     store.loadPlans()
@@ -23,30 +24,36 @@ async function create() {
         <h1 class="text-2xl font-semibold">Trainingspläne</h1>
 
         <!-- Create -->
-        <div class="bg-card border border-border rounded-2xl p-3 flex gap-2">
+        <div class="flex gap-2">
             <input
                 v-model="newPlanName"
                 placeholder="Neuer Plan"
-                class="flex-1 bg-neutral-600 rounded-lg p-2 px-3 text-sm outline-none"
+                @keyup.enter="create"
+                class="flex-1 bg-neutral-800 border border-border rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-500 transition-colors"
             />
             <button
                 @click="create"
-                class="bg-primary-500 hover:bg-primary-600 text-white rounded-lg px-4 py-2 font-medium transition flex items-center gap-1"
+                class="bg-primary-500 hover:bg-primary-600 text-white rounded-xl px-4 py-2.5 font-semibold text-sm transition-colors flex items-center gap-1.5 shrink-0"
             >
-                <IconPlus class="w-4 h-4" /> Erstellen
+                <IconPlus class="size-4" /> Erstellen
             </button>
         </div>
 
+        <!-- Loading -->
+        <div v-if="store.loading" class="flex justify-center py-10">
+            <IconLoaderCircle class="size-8 animate-spin text-primary-500" />
+        </div>
+
         <!-- List -->
-        <div class="space-y-3">
+        <div v-else class="space-y-3">
             <div
                 v-for="plan in store.plans"
                 :key="plan.id"
                 class="bg-card border rounded-2xl p-4 flex justify-between items-center"
-                :class="plan.isActive ? 'border-primary-500' : 'border-border'"
+                :class="plan.isActive ? 'border-primary-500/60' : 'border-border hover:border-neutral-700'"
             >
                 <div>
-                    <div class="font-medium flex items-center gap-2">
+                    <div class="font-semibold text-sm flex items-center gap-2">
                         {{ plan.name }}
                         <span v-if="plan.isActive"
                             class="text-xs bg-primary-500 text-white px-2 py-0.5 rounded-full">
@@ -66,12 +73,27 @@ async function create() {
                     >
                         Aktivieren
                     </button>
+
+                    <!-- Delete with inline confirm -->
+                    <template v-if="confirmingDeleteId === plan.id">
+                        <button
+                            @click="store.deletePlan(plan.id); confirmingDeleteId = null"
+                            class="text-red-400 hover:text-red-300 text-sm font-medium transition"
+                        >
+                            Löschen
+                        </button>
+                        <button @click="confirmingDeleteId = null" class="text-text-muted hover:text-text transition">
+                            <IconX class="size-4" />
+                        </button>
+                    </template>
                     <button
-                        @click="store.deletePlan(plan.id)"
-                        class="text-text-muted hover:text-primary-400"
+                        v-else
+                        @click="confirmingDeleteId = plan.id"
+                        class="text-text-muted hover:text-red-400 transition-colors"
                     >
                         <IconTrash2 class="size-4" />
                     </button>
+
                     <NuxtLink
                         :to="`/plan/${plan.id}`"
                         class="text-sm text-primary-400 hover:text-primary-500 flex items-center gap-1"
@@ -81,9 +103,13 @@ async function create() {
                 </div>
             </div>
 
-            <div v-if="store.plans.length === 0" class="text-center text-text-muted text-sm py-10">
-                Noch keine Pläne erstellt
+            <!-- Empty state -->
+            <div v-if="store.plans.length === 0" class="text-center py-16 space-y-2">
+                <IconCalendar class="size-10 text-text-muted mx-auto" />
+                <p class="text-sm text-text-muted">Noch keine Trainingspläne vorhanden.</p>
+                <p class="text-xs text-neutral-600">Erstelle deinen ersten Plan oben.</p>
             </div>
         </div>
     </div>
 </template>
+

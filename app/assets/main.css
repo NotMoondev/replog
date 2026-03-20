@@ -1,49 +1,33 @@
 @import "tailwindcss";
 
-/* ========================================
-   THEME (Tailwind v4)
-   ======================================== */
-
 @theme {
-    /* 🔴 Primary (Red Monochrome) */
     --color-primary-50: #fef2f2;
     --color-primary-100: #fee2e2;
     --color-primary-200: #fecaca;
     --color-primary-300: #fca5a5;
     --color-primary-400: #f87171;
     --color-primary-500: #ef4444;
-    /* base */
     --color-primary-600: #dc2626;
     --color-primary-700: #b91c1c;
     --color-primary-800: #991b1b;
     --color-primary-900: #7f1d1d;
 
-    /* ⚫ Neutral (Dark-first UI) */
-    --color-neutral-50: #fafafa;
-    --color-neutral-100: #f4f4f5;
-    --color-neutral-200: #e4e4e7;
-    --color-neutral-300: #d4d4d8;
-    --color-neutral-400: #a1a1aa;
-    --color-neutral-500: #71717a;
-    --color-neutral-600: #52525b;
-    --color-neutral-700: #3f3f46;
-    --color-neutral-800: #27272a;
-    --color-neutral-900: #18181b;
-
-    /* 🎯 Semantic Tokens */
-    --color-bg: var(--color-neutral-900);
-    --color-bg-soft: var(--color-neutral-800);
-    --color-border: var(--color-neutral-700);
+    /* Surface layers: bg (darkest) → card → inputs/chips */
+    --color-bg: var(--color-neutral-950);
+    --color-bg-soft: #1e1e1e;
+    --color-card: var(--color-neutral-900);
+    --color-border: #2c2c2c;
 
     --color-text: var(--color-neutral-100);
-    --color-text-muted: var(--color-neutral-400);
-
-    --color-card: var(--color-neutral-800);
+    --color-text-muted: var(--color-neutral-500);
 
     --color-accent: var(--color-primary-500);
     --color-accent-hover: var(--color-primary-600);
+}
 
-    --radius-default: 0.75rem;
+/* Safe-area padding for notch devices */
+.pb-safe {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 0px);
 }
 
 #app-logo {

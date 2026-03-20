@@ -21,27 +21,34 @@ function goBack() {
 <template>
     <div class="h-screen bg-bg text-text flex flex-col">
         <!-- Top Bar -->
-        <header class="flex items-center justify-between bg-card border-b border-border px-4 py-3 shadow-sm" v-if="route.path !== '/'">
-            <button v-if="route.path !== '/'" @click="goBack"
-                class="text-primary-500 hover:text-primary-400 flex items-center gap-1 w-20">
-                <IconArrowLeft class="text-white size-7" />
+        <header
+            v-if="route.path !== '/'"
+            class="flex items-center justify-between bg-card border-b border-border px-4 py-3"
+        >
+            <button @click="goBack" class="flex items-center w-16">
+                <IconArrowLeft class="size-5 text-text" />
             </button>
 
-            <div class="text-lg font-semibold text-center flex-1">
+            <div class="text-base font-semibold text-center flex-1">
                 {{ routeTitle }}
             </div>
 
-            <!-- Settings Icon -->
-            <div class="w-20 flex justify-end">
-                <NuxtLink to="/settings" class="text-text-muted hover:text-text" v-if="route.path !== '/settings'">
-                    <IconSettings class="w-6 h-6" />
+            <div class="w-16 flex justify-end">
+                <NuxtLink
+                    v-if="route.path === '/settings'"
+                    to="/"
+                    class="text-text-muted hover:text-text p-1"
+                >
                 </NuxtLink>
             </div>
         </header>
 
         <!-- Page Content -->
-        <main class="flex-1 overflow-y-auto">
+        <main class="flex-1 overflow-y-auto pb-20">
             <slot />
         </main>
     </div>
+    <BottomNav />
+    <ToastContainer />
 </template>
+

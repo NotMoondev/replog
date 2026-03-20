@@ -2,17 +2,43 @@
 defineProps<{
     exercise: any
 }>()
+
+const emit = defineEmits<{
+    edit: []
+    delete: []
+}>()
+
+const confirmingDelete = ref(false)
 </script>
 
 <template>
     <div class="bg-card border border-border rounded-2xl p-4 space-y-3">
         <!-- Header -->
-        <div class="flex justify-between items-center">
-            <h3 class="font-medium">{{ exercise.name }}</h3>
-            <span class="text-xs font-medium px-2 py-0.5 rounded-full"
-                :class="exercise.type === 'strength' ? 'bg-primary-500/20 text-primary-400' : 'bg-blue-500/20 text-blue-400'">
-                {{ exercise.type === 'strength' ? 'Kraft' : 'Cardio' }}
-            </span>
+        <div class="flex justify-between items-center gap-2">
+            <h3 class="font-semibold text-sm truncate">{{ exercise.name }}</h3>
+            <div class="flex items-center gap-2 shrink-0">
+                <span class="text-xs font-medium px-2 py-0.5 rounded-full"
+                    :class="exercise.type === 'strength' ? 'bg-primary-500/20 text-primary-400' : 'bg-blue-500/20 text-blue-400'">
+                    {{ exercise.type === 'strength' ? 'Kraft' : 'Cardio' }}
+                </span>
+                <button @click="emit('edit')" class="text-text-muted hover:text-primary-400 transition-colors">
+                    <IconPencil class="size-4" />
+                </button>
+                <template v-if="confirmingDelete">
+                    <button
+                        @click="emit('delete'); confirmingDelete = false"
+                        class="text-red-400 hover:text-red-300 text-xs font-medium transition px-1"
+                    >
+                        Löschen
+                    </button>
+                    <button @click="confirmingDelete = false" class="text-text-muted hover:text-text transition">
+                        <IconX class="size-3.5" />
+                    </button>
+                </template>
+                <button v-else @click="confirmingDelete = true" class="text-text-muted hover:text-red-400 transition-colors">
+                    <IconTrash2 class="size-4" />
+                </button>
+            </div>
         </div>
 
         <!-- Strength: set chips -->
@@ -44,3 +70,4 @@ defineProps<{
         </div>
     </div>
 </template>
+
