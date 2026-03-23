@@ -1,4 +1,7 @@
 <script setup lang="ts">
+const { initTheme } = useTheme()
+onMounted(() => initTheme())
+
 useHead({
     title: 'REPLOG',
     meta: [

@@ -2,8 +2,15 @@
 import { exportAllData, importAllData } from '~/utils/exportImport'
 
 const { addToast } = useToast()
+const { theme, setTheme } = useTheme()
 const importing = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
+
+const themeOptions = [
+    { value: 'dark', label: 'Dunkel', icon: 'IconMoon' },
+    { value: 'light', label: 'Hell', icon: 'IconSun' },
+    { value: 'system', label: 'System', icon: 'IconMonitor' },
+] as const
 
 async function handleExport() {
     try {
@@ -43,6 +50,32 @@ async function handleImport(event: Event) {
 <template>
     <div class="min-h-full bg-bg text-text p-4 space-y-6">
         <h1 class="text-2xl font-semibold">Einstellungen</h1>
+
+        <!-- Theme -->
+        <div class="bg-card border border-border rounded-2xl p-4 space-y-3">
+            <div>
+                <h2 class="font-medium">Design</h2>
+                <p class="text-sm text-text-muted mt-1">Wähle zwischen hellem, dunklem oder systemseitigem Design.</p>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+                <button
+                    v-for="opt in themeOptions"
+                    :key="opt.value"
+                    @click="setTheme(opt.value)"
+                    :class="[
+                        'flex flex-col items-center gap-1.5 rounded-xl py-3 text-xs font-medium transition-colors border',
+                        theme === opt.value
+                            ? 'bg-accent/15 border-accent text-accent'
+                            : 'bg-surface/60 border-transparent text-text-muted hover:text-text'
+                    ]"
+                >
+                    <IconMoon v-if="opt.icon === 'IconMoon'" class="size-4" />
+                    <IconSun v-else-if="opt.icon === 'IconSun'" class="size-4" />
+                    <IconMonitor v-else class="size-4" />
+                    {{ opt.label }}
+                </button>
+            </div>
+        </div>
 
         <!-- Data Backup -->
         <div class="bg-card border border-border rounded-2xl p-4 space-y-4">
