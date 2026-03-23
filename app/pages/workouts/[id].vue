@@ -10,6 +10,7 @@ const workout = computed(() =>
 )
 
 const showModal = ref(false)
+const showPicker = ref(false)
 const editingExercise = ref<{ exercise: Exercise; index: number } | null>(null)
 
 // Inline rename
@@ -109,12 +110,15 @@ async function handleDeleteExercise(exerciseId: string) {
                 Workout starten
             </NuxtLink>
 
-            <button @click="showModal = true"
+            <button @click="showPicker = true"
                 class="w-full bg-neutral-800 hover:bg-neutral-700 rounded-xl py-3 font-semibold text-sm transition-colors">
                 + Übung hinzufügen
             </button>
 
-            <!-- Add Modal -->
+            <!-- Picker Modal (from library or create new) -->
+            <ExercisePickerModal v-if="showPicker" @close="showPicker = false" :workoutId="workout.id" />
+
+            <!-- Add directly Modal (fallback kept for compatibility) -->
             <ExerciseModal v-if="showModal" @close="showModal = false" :workoutId="workout.id" />
 
             <!-- Edit Modal -->

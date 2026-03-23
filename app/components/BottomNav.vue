@@ -2,6 +2,7 @@
 const route = useRoute()
 
 const isHome = computed(() => route.path === '/')
+const isExercises = computed(() => route.path.startsWith('/exercises'))
 const isWorkouts = computed(() => route.path.startsWith('/workouts'))
 const isPlan = computed(() => route.path.startsWith('/plan'))
 const isStats = computed(() => route.path.startsWith('/stats'))
@@ -9,6 +10,10 @@ const isSession = computed(() => route.path.startsWith('/session'))
 </script>
 
 <template>
+    <!-- Fade overlay behind the nav -->
+    <div v-if="!isSession" class="fixed bottom-0 inset-x-0 h-28 z-30 pointer-events-none"
+        style="background: linear-gradient(to top, rgba(10,10,10,0.85) 0%, rgba(10,10,10,0) 100%);" />
+
     <nav v-if="!isSession" class="fixed bottom-4 inset-x-4 z-40">
         <div class="flex bg-card border border-border rounded-2xl overflow-hidden shadow-lg">
             <NuxtLink
@@ -18,6 +23,15 @@ const isSession = computed(() => route.path.startsWith('/session'))
             >
                 <IconHouse class="size-5" />
                 <span class="text-[10px] font-medium">Home</span>
+            </NuxtLink>
+
+            <NuxtLink
+                to="/exercises"
+                class="flex-1 flex flex-col items-center py-3 gap-0.5 transition-colors"
+                :class="isExercises ? 'text-primary-500' : 'text-text-muted'"
+            >
+                <IconListChecks class="size-5" />
+                <span class="text-[10px] font-medium">Übungen</span>
             </NuxtLink>
 
             <NuxtLink

@@ -5,6 +5,7 @@ const router = useRouter()
 const route = useRoute()
 
 const routeTitle = computed(() => {
+    if (route.path.startsWith('/exercises')) return 'Übungen'
     if (route.path.startsWith('/workouts')) return 'Workouts'
     if (route.path.startsWith('/plan')) return 'Trainingsplan'
     if (route.path.startsWith('/stats')) return 'Statistiken'

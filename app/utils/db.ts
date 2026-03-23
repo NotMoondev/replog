@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie'
-import type { Workout } from '~/types/workout'
+import type { Workout, Exercise } from '~/types/workout'
 import type { TrainingPlan } from '~/types/trainingPlan'
 import type { WorkoutSession } from '~/types/session'
 
@@ -7,6 +7,7 @@ class AppDB extends Dexie {
     workouts!: Table<Workout, string>
     trainingPlans!: Table<TrainingPlan, string>
     sessions!: Table<WorkoutSession, string>
+    exercises!: Table<Exercise, string>
 
     constructor() {
         super('replogDB')
@@ -19,6 +20,10 @@ class AppDB extends Dexie {
 
         this.version(2).stores({
             trainingPlans: 'id, name, isActive',
+        })
+
+        this.version(3).stores({
+            exercises: 'id, name, type',
         })
     }
 }

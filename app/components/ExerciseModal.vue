@@ -1,16 +1,25 @@
 <script setup lang="ts">
 import { useWorkoutStore } from '~/stores/useWorkoutStore'
+import { useExerciseStore } from '~/stores/useExerciseStore'
 
 const props = defineProps<{
-    workoutId: string
+    workoutId?: string
     initialExercise?: any
     exerciseIndex?: number
 }>()
 
 const emit = defineEmits(['close'])
 
-const store = useWorkoutStore()
-const isEdit = computed(() => props.initialExercise !== undefined && props.exerciseIndex !== undefined)
+const workoutStore = useWorkoutStore()
+const exerciseStore = useExerciseStore()
+
+// Library mode = no workoutId provided
+const isLibraryMode = computed(() => !props.workoutId)
+const isEdit = computed(() =>
+    isLibraryMode.value
+        ? props.initialExercise !== undefined
+        : props.initialExercise !== undefined && props.exerciseIndex !== undefined
+)
 
 const type = ref<'strength' | 'cardio'>('strength')
 const name = ref('')
@@ -22,9 +31,31 @@ const sets = ref<Array<{ reps?: number; weight?: number }>>([
 ])
 
 /* Cardio */
-const duration = ref<number | undefined>()
+const duration = ref<number | undefined>() // always stored as seconds
+const durationUnit = ref<'s' | 'min'>('s')
 const metric = ref<'intensity' | 'speed' | 'none'>('none')
 const metricValue = ref<number | undefined>()
+
+// Displayed value in the chosen unit
+const durationDisplay = computed({
+    get(): number | undefined {
+        if (duration.value == null) return undefined
+        return durationUnit.value === 'min'
+            ? Math.round(duration.value / 60 * 100) / 100
+            : duration.value
+    },
+    set(val: number | undefined) {
+        if (val == null || isNaN(val as number)) {
+            duration.value = undefined
+        } else {
+            duration.value = durationUnit.value === 'min' ? Math.round((val as number) * 60) : (val as number)
+        }
+    },
+})
+
+function switchDurationUnit(unit: 's' | 'min') {
+    durationUnit.value = unit
+}
 
 onMounted(() => {
     if (props.initialExercise) {
@@ -33,7 +64,14 @@ onMounted(() => {
         if (props.initialExercise.type === 'strength') {
             sets.value = props.initialExercise.sets.map((s: any) => ({ reps: s.reps, weight: s.weight }))
         } else {
-            duration.value = props.initialExercise.duration
+            const secs: number = props.initialExercise.duration ?? 0
+            // auto-select unit: use minutes if stored value is a whole number of minutes >= 60s
+            if (secs >= 60 && secs % 60 === 0) {
+                durationUnit.value = 'min'
+            } else {
+                durationUnit.value = 's'
+            }
+            duration.value = secs
             metric.value = props.initialExercise.metric ?? 'none'
             metricValue.value = props.initialExercise.metricValue
         }
@@ -68,10 +106,18 @@ async function save() {
         }
     }
 
-    if (isEdit.value) {
-        await store.updateExercise(props.workoutId, props.exerciseIndex!, exercise)
+    if (isLibraryMode.value) {
+        if (isEdit.value) {
+            await exerciseStore.updateExercise(exercise)
+        } else {
+            await exerciseStore.createExercise(exercise)
+        }
     } else {
-        await store.addExercise(props.workoutId, exercise)
+        if (isEdit.value) {
+            await workoutStore.updateExercise(props.workoutId!, props.exerciseIndex!, exercise)
+        } else {
+            await workoutStore.addExercise(props.workoutId!, exercise)
+        }
     }
 
     emit('close')
@@ -80,8 +126,13 @@ async function save() {
 
 <template>
     <div class="fixed inset-0 bg-black/60 flex items-end z-50" @click.self="emit('close')">
-        <div class="w-full bg-card rounded-t-2xl p-5 space-y-4">
-            <!-- Header -->
+        <Transition
+            enter-active-class="transition-transform duration-[350ms] ease-out"
+            enter-from-class="translate-y-full"
+            enter-to-class="translate-y-0"
+            appear
+        >
+            <div class="w-full bg-card rounded-t-2xl p-5 space-y-4">
             <div class="flex justify-between items-center">
                 <h2 class="font-semibold text-lg">{{ isEdit ? 'Übung bearbeiten' : 'Neue Übung' }}</h2>
                 <button @click="emit('close')" class="p-1.5 text-text-muted hover:text-text transition-colors">
@@ -118,7 +169,7 @@ async function save() {
                 @input="nameError = false"
             />
 
-            <hr class="h-1 border-none bg-linear-to-r from-neutral-800 via-neutral-700 to-neutral-800">
+            <hr class="border-border mx-5 shrink-0" />
 
             <!-- Strength Form -->
             <div v-if="type === 'strength'" class="space-y-3 flex flex-col mb-2">
@@ -151,8 +202,32 @@ async function save() {
 
             <!-- Cardio Form -->
             <div v-if="type === 'cardio'" class="space-y-3 flex flex-col mb-2 overflow-y-auto max-h-72">
-                <input v-model.number="duration" type="number" placeholder="Dauer (Sekunden)"
-                    class="w-full bg-neutral-800 border border-border rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-500 transition-colors" />
+                <!-- Duration with unit toggle -->
+                <div class="flex gap-2">
+                    <input
+                        :value="durationDisplay"
+                        @input="durationDisplay = ($event.target as HTMLInputElement).valueAsNumber || undefined"
+                        type="number"
+                        :placeholder="durationUnit === 'min' ? 'Dauer (Minuten)' : 'Dauer (Sekunden)'"
+                        class="flex-1 bg-neutral-800 border border-border rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-500 transition-colors"
+                    />
+                    <div class="flex bg-neutral-800 p-1 rounded-xl shrink-0">
+                        <button
+                            @click="switchDurationUnit('s')"
+                            :class="[
+                                'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                                durationUnit === 's' ? 'bg-primary-500 text-white' : 'text-text-muted hover:text-text'
+                            ]"
+                        >Sek</button>
+                        <button
+                            @click="switchDurationUnit('min')"
+                            :class="[
+                                'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                                durationUnit === 'min' ? 'bg-primary-500 text-white' : 'text-text-muted hover:text-text'
+                            ]"
+                        >Min</button>
+                    </div>
+                </div>
 
                 <div class="flex gap-1.5 bg-neutral-800 p-1 rounded-xl">
                     <button @click="metric = 'none'" :class="[
@@ -178,7 +253,8 @@ async function save() {
             <button @click="save" class="w-full bg-primary-500 hover:bg-primary-600 rounded-xl py-3 font-semibold text-sm transition-colors">
                 {{ isEdit ? 'Speichern' : 'Hinzufügen' }}
             </button>
-        </div>
+            </div>
+        </Transition>
     </div>
 </template>
 

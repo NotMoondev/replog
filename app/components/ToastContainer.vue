@@ -4,7 +4,7 @@ const { toasts, removeToast } = useToast()
 
 <template>
     <Teleport to="body">
-        <div class="fixed bottom-6 inset-x-0 z-50 flex flex-col gap-2 items-center pointer-events-none px-4">
+        <div class="fixed bottom-24 inset-x-0 z-50 flex flex-col gap-2 items-center pointer-events-none px-4">
             <TransitionGroup name="toast">
                 <div
                     v-for="toast in toasts"

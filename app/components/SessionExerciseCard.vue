@@ -54,6 +54,27 @@ const metricLabel = computed(() => {
     return ''
 })
 
+// Derive unit from exercise default (use min if exercise duration is a whole minute)
+const durationUnit = computed((): 's' | 'min' => {
+    if (props.exercise.type !== 'cardio') return 's'
+    const d = (props.exercise as any).duration ?? 0
+    return d >= 60 && d % 60 === 0 ? 'min' : 's'
+})
+
+const durationDisplay = computed({
+    get(): number | undefined {
+        const v = props.modelValue.duration
+        if (v == null) return undefined
+        return durationUnit.value === 'min' ? Math.round(v / 60 * 100) / 100 : v
+    },
+    set(val: number | undefined) {
+        const secs = val == null || isNaN(val as number)
+            ? undefined
+            : durationUnit.value === 'min' ? Math.round((val as number) * 60) : (val as number)
+        update({ duration: secs })
+    },
+})
+
 const isPartiallyDone = computed(() => {
     if (props.exercise.type === 'strength') return props.modelValue.sets.some(s => s.completed)
     return props.modelValue.completed
@@ -84,11 +105,11 @@ const isPartiallyDone = computed(() => {
                 <div class="flex gap-2 flex-1">
                     <input type="number" :value="set.reps"
                         @input="updateSet(i, { reps: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
-                        :placeholder="lastSet(i)?.reps != null ? String(lastSet(i)!.reps) : 'Reps'"
+                        placeholder="Wdh"
                         class="w-full bg-neutral-800 border border-border rounded-xl px-2.5 py-2 text-sm outline-none focus:border-primary-500 transition-colors" />
                     <input type="number" :value="set.weight"
                         @input="updateSet(i, { weight: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
-                        :placeholder="lastSet(i)?.weight != null ? String(lastSet(i)!.weight) + 'kg' : 'kg'"
+                        placeholder="kg"
                         class="w-full bg-neutral-800 border border-border rounded-xl px-2.5 py-2 text-sm outline-none focus:border-primary-500 transition-colors" />
                     <button v-if="i > 0 && (modelValue.sets[i - 1]?.reps != null || modelValue.sets[i - 1]?.weight != null)"
                         @click="copyFromPrevSet(i)"
@@ -110,14 +131,19 @@ const isPartiallyDone = computed(() => {
             </label>
 
             <div class="flex gap-2" :class="modelValue.completed ? 'opacity-50' : ''">
-                <input type="number" :value="modelValue.duration"
-                    @input="update({ duration: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
-                    :placeholder="lastExercise?.duration != null ? String(lastExercise.duration) + 's' : 'Dauer (Sek)'"
-                    class="w-full bg-neutral-800 border border-border rounded-xl px-2.5 py-2 text-sm outline-none focus:border-primary-500 transition-colors" />
+                <div class="relative flex-1">
+                    <input type="number" :value="durationDisplay"
+                        @input="durationDisplay = ($event.target as HTMLInputElement).valueAsNumber || undefined"
+                        :placeholder="durationUnit === 'min' ? 'Min' : 'Sek'"
+                        class="w-full bg-neutral-800 border border-border rounded-xl px-2.5 py-2 pr-12 text-sm outline-none focus:border-primary-500 transition-colors" />
+                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-muted pointer-events-none">
+                        {{ durationUnit === 'min' ? 'min' : 's' }}
+                    </span>
+                </div>
 
                 <input v-if="exercise.metric !== 'none'" type="number" :value="modelValue.metricValue"
                     @input="update({ metricValue: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
-                    :placeholder="lastExercise?.metricValue != null ? String(lastExercise.metricValue) + ' ' + metricLabel : metricLabel"
+                    :placeholder="metricLabel"
                     class="w-full bg-neutral-800 border border-border rounded-xl px-2.5 py-2 text-sm outline-none focus:border-primary-500 transition-colors" />
             </div>
         </div>

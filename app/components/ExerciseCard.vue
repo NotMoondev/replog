@@ -9,6 +9,12 @@ const emit = defineEmits<{
 }>()
 
 const confirmingDelete = ref(false)
+
+function formatDuration(secs: number): string {
+    if (secs >= 60 && secs % 60 === 0) return `${secs / 60} min`
+    if (secs >= 60) return `${(secs / 60).toFixed(1)} min`
+    return `${secs} s`
+}
 </script>
 
 <template>
@@ -58,7 +64,7 @@ const confirmingDelete = ref(false)
         <div v-if="exercise.type === 'cardio'" class="flex flex-wrap gap-2">
             <div class="flex items-center gap-1.5 bg-neutral-800 rounded-lg px-3 py-1.5 text-sm">
                 <IconTimer class="w-3.5 h-3.5 text-blue-400" />
-                <span class="font-medium">{{ exercise.duration }}<span class="text-text-muted font-normal"> s</span></span>
+                <span class="font-medium">{{ formatDuration(exercise.duration) }}</span>
             </div>
             <div v-if="exercise.metric && exercise.metric !== 'none' && exercise.metricValue != null"
                 class="flex items-center gap-1.5 bg-neutral-800 rounded-lg px-3 py-1.5 text-sm">

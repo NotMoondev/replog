@@ -58,7 +58,7 @@ async function create() {
                     </div>
                 </div>
 
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2">
                     <!-- Clone -->
                     <button
                         @click="store.cloneWorkout(w.id)"
@@ -88,12 +88,22 @@ async function create() {
                         <IconTrash2 class="size-4" />
                     </button>
 
+                    <!-- Edit (icon only) -->
                     <NuxtLink
                         :to="`/workouts/${w.id}`"
-                        class="flex items-center gap-1 text-sm text-primary-400 hover:text-primary-500"
+                        class="p-1 text-text-muted hover:text-text transition-colors"
+                        title="Bearbeiten"
                     >
-                        Bearbeiten
-                        <IconArrowRight class="size-4" />
+                        <IconPencil class="size-4" />
+                    </NuxtLink>
+
+                    <!-- Start -->
+                    <NuxtLink
+                        :to="`/session/${w.id}`"
+                        class="flex items-center gap-1.5 text-sm bg-primary-500 hover:bg-primary-600 text-white rounded-lg px-3 py-1.5 font-semibold transition-colors shrink-0"
+                    >
+                        <IconPlay class="size-3.5" />
+                        Starten
                     </NuxtLink>
                 </div>
             </div>
