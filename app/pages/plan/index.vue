@@ -5,6 +5,8 @@ const store = useTrainingPlanStore()
 const router = useRouter()
 const newPlanName = ref('')
 const confirmingDeleteId = ref<string | null>(null)
+const importInput = ref<HTMLInputElement | null>(null)
+const importing = ref(false)
 
 onMounted(() => {
     store.loadPlans()
@@ -16,6 +18,20 @@ async function create() {
     const plan = await store.createPlan(trimmed)
     newPlanName.value = ''
     router.push(`/plan/${plan.id}`)
+}
+
+async function handleImport(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0]
+    if (!file) return
+    importing.value = true
+    try {
+        await store.importPlan(file)
+    } catch (e: any) {
+        useToast().addToast(e.message ?? 'Import fehlgeschlagen', 'error')
+    } finally {
+        importing.value = false
+        if (importInput.value) importInput.value.value = ''
+    }
 }
 </script>
 
@@ -36,6 +52,23 @@ async function create() {
                 class="bg-primary-500 hover:bg-primary-600 text-white rounded-xl px-4 py-2.5 font-semibold text-sm transition-colors flex items-center gap-1.5 shrink-0"
             >
                 <IconPlus class="size-4" /> Erstellen
+            </button>
+            <!-- Import -->
+            <input
+                ref="importInput"
+                type="file"
+                accept=".json,application/json"
+                class="hidden"
+                @change="handleImport"
+            />
+            <button
+                @click="importInput?.click()"
+                :disabled="importing"
+                class="bg-surface border border-border hover:border-primary-500 text-text rounded-xl px-3 py-2.5 text-sm transition-colors flex items-center gap-1.5 shrink-0 disabled:opacity-50"
+                title="Plan importieren"
+            >
+                <IconLoaderCircle v-if="importing" class="size-4 animate-spin" />
+                <IconUpload v-else class="size-4" />
             </button>
         </div>
 
@@ -94,12 +127,21 @@ async function create() {
                         <IconTrash2 class="size-4" />
                     </button>
 
+                    <button
+                        @click="store.exportPlan(plan.id)"
+                        class="text-text-muted hover:text-primary-400 transition-colors"
+                        title="Plan exportieren"
+                    >
+                        <IconShare2 class="size-4" />
+                    </button>
+
                     <NuxtLink
                         :to="`/plan/${plan.id}`"
-                        class="text-sm text-primary-400 hover:text-primary-500 flex items-center gap-1"
+                        class="text-sm text-text-muted hover:text-primary-400 flex items-center gap-1"
                     >
-                        Bearbeiten <IconArrowRight class="size-4" />
+                        <IconPen class="size-4" />
                     </NuxtLink>
+
                 </div>
             </div>
 

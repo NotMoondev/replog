@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { toRaw } from 'vue'
 import { db } from '~/utils/db'
+import { exportPlan, importPlan as importPlanFile } from '~/utils/exportImport'
+import { useWorkoutStore } from '~/stores/useWorkoutStore'
 import type { TrainingPlan, TrainingDay } from '~/types/trainingPlan'
 
 export const useTrainingPlanStore = defineStore('trainingPlans', {
@@ -89,6 +91,28 @@ export const useTrainingPlanStore = defineStore('trainingPlans', {
             plan.name = name
             await db.trainingPlans.put(JSON.parse(JSON.stringify(toRaw(plan))))
             useToast().addToast('Plan umbenannt')
+        },
+
+        exportPlan(id: string) {
+            const plan = this.plans.find(p => p.id === id)
+            if (!plan) return
+            const workoutStore = useWorkoutStore()
+            exportPlan(
+                JSON.parse(JSON.stringify(toRaw(plan))),
+                JSON.parse(JSON.stringify(toRaw(workoutStore.workouts))),
+            )
+        },
+
+        async importPlan(file: File): Promise<void> {
+            const { plan, workouts } = await importPlanFile(file)
+            const workoutStore = useWorkoutStore()
+            await db.transaction('rw', [db.trainingPlans, db.workouts], async () => {
+                await db.trainingPlans.add(plan)
+                if (workouts.length) await db.workouts.bulkAdd(workouts)
+            })
+            this.plans.push(plan)
+            workoutStore.workouts.push(...workouts)
+            useToast().addToast(`"${plan.name}" importiert`)
         },
     },
 })
