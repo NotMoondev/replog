@@ -91,7 +91,7 @@ async function handleImport(event: Event) {
                     @click="handleExport"
                     class="w-full flex items-center justify-center gap-2 bg-surface hover:bg-surface-hover text-text rounded-xl py-3 font-semibold text-sm transition-colors"
                 >
-                    <IconDownload class="size-5" />
+                    <IconUpload class="size-5" />
                     Daten exportieren
                 </button>
 
@@ -101,7 +101,7 @@ async function handleImport(event: Event) {
                     class="w-full flex items-center justify-center gap-2 bg-surface hover:bg-surface-hover disabled:opacity-40 text-text rounded-xl py-3 font-semibold text-sm transition-colors"
                 >
                     <IconLoaderCircle v-if="importing" class="size-5 animate-spin" />
-                    <IconUpload v-else class="size-5" />
+                    <IconDownload v-else class="size-5" />
                     Daten importieren
                 </button>
 

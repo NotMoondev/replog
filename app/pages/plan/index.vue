@@ -68,7 +68,7 @@ async function handleImport(event: Event) {
                 title="Plan importieren"
             >
                 <IconLoaderCircle v-if="importing" class="size-4 animate-spin" />
-                <IconUpload v-else class="size-4" />
+                <IconDownload v-else class="size-4" />
             </button>
         </div>
 
