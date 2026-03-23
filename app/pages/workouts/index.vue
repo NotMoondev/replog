@@ -31,7 +31,7 @@ async function create() {
                 v-model="newName"
                 placeholder="Neues Workout"
                 @keyup.enter="create"
-                class="flex-1 bg-neutral-800 border border-border rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-500 transition-colors"
+                class="flex-1 bg-surface border border-border rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-500 transition-colors"
             />
             <button
                 @click="create"
@@ -49,7 +49,7 @@ async function create() {
         <!-- Workout List -->
         <div v-else class="space-y-3">
             <div v-for="w in store.workouts" :key="w.id"
-                class="bg-card border border-border rounded-2xl p-4 flex justify-between items-center hover:border-neutral-700 transition-colors">
+                class="bg-card border border-border rounded-2xl p-4 flex justify-between items-center hover:border-surface-hover transition-colors">
 
                 <div>
                     <div class="font-semibold text-sm">{{ w.name }}</div>
@@ -112,7 +112,7 @@ async function create() {
             <div v-if="store.workouts.length === 0" class="text-center py-16 space-y-2">
                 <IconDumbbell class="size-10 text-text-muted mx-auto" />
                 <p class="text-sm text-text-muted">Noch keine Workouts vorhanden.</p>
-                <p class="text-xs text-neutral-600">Erstelle dein erstes Workout oben.</p>
+                <p class="text-xs text-text-muted">Erstelle dein erstes Workout oben.</p>
             </div>
         </div>
     </div>

@@ -160,7 +160,7 @@ const exerciseChartData = computed(() => {
             <div class="relative">
                 <select
                     v-model="selectedWorkoutId"
-                    class="w-full bg-neutral-800 border border-border rounded-xl px-3 py-2.5 text-sm outline-none appearance-none focus:border-primary-500 transition-colors cursor-pointer"
+                    class="w-full bg-surface border border-border rounded-xl px-3 py-2.5 text-sm outline-none appearance-none focus:border-primary-500 transition-colors cursor-pointer"
                 >
                     <option value="">Workout wählen...</option>
                     <option v-for="w in workoutStore.workouts" :key="w.id" :value="w.id">
@@ -189,7 +189,7 @@ const exerciseChartData = computed(() => {
         >
             <IconDumbbell class="size-10 text-text-muted mx-auto mb-3" />
             <p class="text-sm text-text-muted">Noch keine Sessions aufgezeichnet.</p>
-            <p class="text-xs text-neutral-600 mt-1">Starte ein Training um Daten zu sehen.</p>
+            <p class="text-xs text-text-muted mt-1">Starte ein Training um Daten zu sehen.</p>
         </div>
 
         <!-- Charts per exercise -->

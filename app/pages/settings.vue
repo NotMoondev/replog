@@ -89,7 +89,7 @@ async function handleImport(event: Event) {
             <div class="space-y-3">
                 <button
                     @click="handleExport"
-                    class="w-full flex items-center justify-center gap-2 bg-neutral-800 hover:bg-neutral-700 text-text rounded-xl py-3 font-semibold text-sm transition-colors"
+                    class="w-full flex items-center justify-center gap-2 bg-surface hover:bg-surface-hover text-text rounded-xl py-3 font-semibold text-sm transition-colors"
                 >
                     <IconDownload class="size-5" />
                     Daten exportieren
@@ -98,7 +98,7 @@ async function handleImport(event: Event) {
                 <button
                     @click="triggerImport"
                     :disabled="importing"
-                    class="w-full flex items-center justify-center gap-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-40 text-text rounded-xl py-3 font-semibold text-sm transition-colors"
+                    class="w-full flex items-center justify-center gap-2 bg-surface hover:bg-surface-hover disabled:opacity-40 text-text rounded-xl py-3 font-semibold text-sm transition-colors"
                 >
                     <IconLoaderCircle v-if="importing" class="size-5 animate-spin" />
                     <IconUpload v-else class="size-5" />

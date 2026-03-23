@@ -67,7 +67,7 @@ async function handleDeleteExercise(exerciseId: string) {
                         @keyup.enter="saveName"
                         @keyup.escape="cancelRename"
                         @blur="saveName"
-                        class="text-xl font-semibold bg-neutral-800 border border-border rounded-xl px-3 py-1.5 outline-none focus:border-primary-500 transition-colors flex-1 min-w-0"
+                        class="text-xl font-semibold bg-surface border border-border rounded-xl px-3 py-1.5 outline-none focus:border-primary-500 transition-colors flex-1 min-w-0"
                     />
                     <button @click="saveName" class="text-primary-400 hover:text-primary-500 shrink-0">
                         <IconCheck class="size-5" />
@@ -111,7 +111,7 @@ async function handleDeleteExercise(exerciseId: string) {
             </NuxtLink>
 
             <button @click="showPicker = true"
-                class="w-full bg-neutral-800 hover:bg-neutral-700 rounded-xl py-3 font-semibold text-sm transition-colors">
+                class="w-full bg-surface hover:bg-surface-hover rounded-xl py-3 font-semibold text-sm transition-colors">
                 + Übung hinzufügen
             </button>
 

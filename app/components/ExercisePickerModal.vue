@@ -62,7 +62,7 @@ function onCreateModalClose() {
 
                 <!-- Search -->
                 <div class="px-5 pb-3 shrink-0">
-                    <div class="flex items-center gap-2 bg-neutral-800 border border-border rounded-xl px-3 py-2.5">
+                    <div class="flex items-center gap-2 bg-surface border border-border rounded-xl px-3 py-2.5">
                         <IconSearch class="size-4 text-text-muted shrink-0" />
                         <input
                             v-model="searchQuery"
@@ -90,7 +90,7 @@ function onCreateModalClose() {
                     <div
                         v-for="ex in filteredExercises"
                         :key="ex.id"
-                        class="flex items-center justify-between gap-3 bg-neutral-800/60 border border-border rounded-xl px-4 py-3"
+                        class="flex items-center justify-between gap-3 bg-surface/60 border border-border rounded-xl px-4 py-3"
                     >
                         <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-2">

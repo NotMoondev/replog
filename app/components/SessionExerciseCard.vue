@@ -106,11 +106,11 @@ const isPartiallyDone = computed(() => {
                     <input type="number" :value="set.reps"
                         @input="updateSet(i, { reps: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
                         placeholder="Wdh"
-                        class="w-full bg-neutral-800 border border-border rounded-xl px-2.5 py-2 text-sm outline-none focus:border-primary-500 transition-colors" />
+                        class="w-full bg-surface border border-border rounded-xl px-2.5 py-2 text-sm outline-none focus:border-primary-500 transition-colors" />
                     <input type="number" :value="set.weight"
                         @input="updateSet(i, { weight: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
                         placeholder="kg"
-                        class="w-full bg-neutral-800 border border-border rounded-xl px-2.5 py-2 text-sm outline-none focus:border-primary-500 transition-colors" />
+                        class="w-full bg-surface border border-border rounded-xl px-2.5 py-2 text-sm outline-none focus:border-primary-500 transition-colors" />
                     <button v-if="i > 0 && (modelValue.sets[i - 1]?.reps != null || modelValue.sets[i - 1]?.weight != null)"
                         @click="copyFromPrevSet(i)"
                         class="shrink-0 text-text-muted hover:text-primary-400 transition-colors"
@@ -135,7 +135,7 @@ const isPartiallyDone = computed(() => {
                     <input type="number" :value="durationDisplay"
                         @input="durationDisplay = ($event.target as HTMLInputElement).valueAsNumber || undefined"
                         :placeholder="durationUnit === 'min' ? 'Min' : 'Sek'"
-                        class="w-full bg-neutral-800 border border-border rounded-xl px-2.5 py-2 pr-12 text-sm outline-none focus:border-primary-500 transition-colors" />
+                        class="w-full bg-surface border border-border rounded-xl px-2.5 py-2 pr-12 text-sm outline-none focus:border-primary-500 transition-colors" />
                     <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-muted pointer-events-none">
                         {{ durationUnit === 'min' ? 'min' : 's' }}
                     </span>
@@ -144,7 +144,7 @@ const isPartiallyDone = computed(() => {
                 <input v-if="exercise.metric !== 'none'" type="number" :value="modelValue.metricValue"
                     @input="update({ metricValue: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
                     :placeholder="metricLabel"
-                    class="w-full bg-neutral-800 border border-border rounded-xl px-2.5 py-2 text-sm outline-none focus:border-primary-500 transition-colors" />
+                    class="w-full bg-surface border border-border rounded-xl px-2.5 py-2 text-sm outline-none focus:border-primary-500 transition-colors" />
             </div>
         </div>
     </div>

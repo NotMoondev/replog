@@ -29,7 +29,7 @@ async function create() {
                 v-model="newPlanName"
                 placeholder="Neuer Plan"
                 @keyup.enter="create"
-                class="flex-1 bg-neutral-800 border border-border rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-500 transition-colors"
+                class="flex-1 bg-surface border border-border rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-500 transition-colors"
             />
             <button
                 @click="create"
@@ -50,7 +50,7 @@ async function create() {
                 v-for="plan in store.plans"
                 :key="plan.id"
                 class="bg-card border rounded-2xl p-4 flex justify-between items-center"
-                :class="plan.isActive ? 'border-primary-500/60' : 'border-border hover:border-neutral-700'"
+                :class="plan.isActive ? 'border-primary-500/60' : 'border-border hover:border-surface-hover'"
             >
                 <div>
                     <div class="font-semibold text-sm flex items-center gap-2">
@@ -107,7 +107,7 @@ async function create() {
             <div v-if="store.plans.length === 0" class="text-center py-16 space-y-2">
                 <IconCalendar class="size-10 text-text-muted mx-auto" />
                 <p class="text-sm text-text-muted">Noch keine Trainingspläne vorhanden.</p>
-                <p class="text-xs text-neutral-600">Erstelle deinen ersten Plan oben.</p>
+                <p class="text-xs text-text-muted">Erstelle deinen ersten Plan oben.</p>
             </div>
         </div>
     </div>

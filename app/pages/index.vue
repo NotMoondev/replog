@@ -136,7 +136,7 @@ onMounted(async () => {
                             day.isToday
                                 ? 'bg-primary-500 ring-2 ring-primary-500/30'
                                 : day.isRestDay
-                                    ? 'bg-neutral-800'
+                                    ? 'bg-surface'
                                     : 'bg-primary-500/20',
                         ]"
                         :title="day.isRestDay ? 'Ruhetag' : (day.workout?.name ?? 'Kein Workout')"

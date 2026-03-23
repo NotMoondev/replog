@@ -141,7 +141,7 @@ async function save() {
             </div>
 
             <!-- Type Switch -->
-            <div class="flex gap-1.5 bg-neutral-800 p-1 rounded-xl">
+            <div class="flex gap-1.5 bg-surface p-1 rounded-xl">
                 <button @click="type = 'strength'" :class="[
                     'flex-1 py-2 rounded-lg text-sm font-medium transition-colors',
                     type === 'strength'
@@ -164,7 +164,7 @@ async function save() {
             <input
                 v-model="name"
                 placeholder="Name"
-                class="w-full bg-neutral-800 border rounded-xl px-3 py-2.5 text-sm outline-none transition-colors"
+                class="w-full bg-surface border rounded-xl px-3 py-2.5 text-sm outline-none transition-colors"
                 :class="nameError ? 'border-red-500' : 'border-border focus:border-primary-500'"
                 @input="nameError = false"
             />
@@ -179,10 +179,10 @@ async function save() {
                         <span class="text-xs font-semibold text-text-muted shrink-0 w-10 text-center">{{ i + 1 }}</span>
 
                         <input v-model.number="set.reps" type="number" placeholder="Reps"
-                            class="bg-neutral-800 border border-border rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-500 transition-colors w-full" />
+                            class="bg-surface border border-border rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-500 transition-colors w-full" />
 
                         <input v-model.number="set.weight" type="number" placeholder="kg"
-                            class="bg-neutral-800 border border-border rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-500 transition-colors w-full" />
+                            class="bg-surface border border-border rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-500 transition-colors w-full" />
 
                         <button @click="sets.splice(i + 1, 0, { reps: set.reps, weight: set.weight })" class="shrink-0 p-1.5 text-text-muted hover:text-primary-400 transition-colors" title="Set duplizieren">
                             <IconCopy class="size-4" />
@@ -209,9 +209,9 @@ async function save() {
                         @input="durationDisplay = ($event.target as HTMLInputElement).valueAsNumber || undefined"
                         type="number"
                         :placeholder="durationUnit === 'min' ? 'Dauer (Minuten)' : 'Dauer (Sekunden)'"
-                        class="flex-1 bg-neutral-800 border border-border rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-500 transition-colors"
+                        class="flex-1 bg-surface border border-border rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-500 transition-colors"
                     />
-                    <div class="flex bg-neutral-800 p-1 rounded-xl shrink-0">
+                    <div class="flex bg-surface p-1 rounded-xl shrink-0">
                         <button
                             @click="switchDurationUnit('s')"
                             :class="[
@@ -229,7 +229,7 @@ async function save() {
                     </div>
                 </div>
 
-                <div class="flex gap-1.5 bg-neutral-800 p-1 rounded-xl">
+                <div class="flex gap-1.5 bg-surface p-1 rounded-xl">
                     <button @click="metric = 'none'" :class="[
                         'flex-1 py-2 rounded-lg text-xs font-medium transition-colors',
                         metric === 'none' ? 'bg-primary-500 text-white' : 'text-text-muted hover:text-text'
@@ -246,7 +246,7 @@ async function save() {
 
                 <input v-if="metric !== 'none'" v-model.number="metricValue" type="number"
                     :placeholder="metric === 'intensity' ? 'Intensität' : 'Geschwindigkeit (km/h)'"
-                    class="w-full bg-neutral-800 border border-border rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-500 transition-colors" />
+                    class="w-full bg-surface border border-border rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-500 transition-colors" />
             </div>
 
             <!-- Save -->

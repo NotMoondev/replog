@@ -166,7 +166,7 @@ async function finish() {
                 <h1 class="text-2xl font-semibold">{{ workout.name }}</h1>
                 <p class="text-sm text-text-muted">
                     {{ doneCount }} / {{ workout.exercises.length }} erledigt
-                    <span v-if="lastSession" class="ml-2 text-neutral-500">
+                    <span v-if="lastSession" class="ml-2 text-text-muted">
                         · Letztes Training: {{ new Date(lastSession.date).toLocaleDateString('de-DE') }}
                     </span>
                 </p>
@@ -216,7 +216,7 @@ async function finish() {
                             <div class="flex gap-3">
                                 <button
                                     @click="showLeaveDialog = false"
-                                    class="flex-1 bg-neutral-800 hover:bg-neutral-700 rounded-xl py-2.5 font-semibold text-sm transition-colors"
+                                    class="flex-1 bg-surface hover:bg-surface-hover rounded-xl py-2.5 font-semibold text-sm transition-colors"
                                 >
                                     Weitertrainieren
                                 </button>

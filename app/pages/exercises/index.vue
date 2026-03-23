@@ -44,7 +44,7 @@ async function handleDelete(id: string) {
         </div>
 
         <!-- Search -->
-        <div class="flex items-center gap-2 bg-neutral-800 border border-border rounded-xl px-3 py-2.5">
+        <div class="flex items-center gap-2 bg-surface border border-border rounded-xl px-3 py-2.5">
             <IconSearch class="size-4 text-text-muted shrink-0" />
             <input
                 v-model="searchQuery"
@@ -77,23 +77,23 @@ async function handleDelete(id: string) {
                         <!-- Strength: set chips -->
                         <div v-if="ex.type === 'strength'" class="flex flex-wrap gap-1.5">
                             <div v-for="(set, i) in ex.sets" :key="i"
-                                class="flex items-center gap-1.5 bg-neutral-800 rounded-lg px-2.5 py-1 text-xs">
+                                class="flex items-center gap-1.5 bg-surface rounded-lg px-2.5 py-1 text-xs">
                                 <span class="text-text-muted">{{ i + 1 }}</span>
                                 <span class="font-medium">{{ set.reps }}<span class="text-text-muted font-normal"> reps</span></span>
                                 <template v-if="set.weight">
-                                    <span class="text-neutral-500">·</span>
+                                    <span class="text-text-muted">·</span>
                                     <span class="text-primary-400">{{ set.weight }}<span class="text-text-muted font-normal"> kg</span></span>
                                 </template>
                             </div>
                         </div>
                         <!-- Cardio: stat pills -->
                         <div v-if="ex.type === 'cardio'" class="flex flex-wrap gap-1.5">
-                            <div class="flex items-center gap-1.5 bg-neutral-800 rounded-lg px-2.5 py-1 text-xs">
+                            <div class="flex items-center gap-1.5 bg-surface rounded-lg px-2.5 py-1 text-xs">
                                 <IconTimer class="w-3 h-3 text-blue-400" />
                                 <span class="font-medium">{{ formatDuration(ex.duration) }}</span>
                             </div>
                             <div v-if="ex.metric !== 'none' && ex.metricValue != null"
-                                class="flex items-center gap-1.5 bg-neutral-800 rounded-lg px-2.5 py-1 text-xs">
+                                class="flex items-center gap-1.5 bg-surface rounded-lg px-2.5 py-1 text-xs">
                                 <span class="font-medium">{{ ex.metricValue }}</span>
                                 <span class="text-text-muted">{{ ex.metric === 'speed' ? 'km/h' : 'Intensität' }}</span>
                             </div>
@@ -130,7 +130,7 @@ async function handleDelete(id: string) {
             <div v-if="store.exercises.length === 0" class="text-center py-16 space-y-2">
                 <IconListChecks class="size-10 text-text-muted mx-auto" />
                 <p class="text-sm text-text-muted">Noch keine Übungen in der Bibliothek.</p>
-                <p class="text-xs text-neutral-600">Klicke auf "Erstellen" um loszulegen.</p>
+                <p class="text-xs text-text-muted">Klicke auf "Erstellen" um loszulegen.</p>
             </div>
             <div v-else-if="filteredExercises.length === 0" class="text-center py-16 space-y-2">
                 <IconSearch class="size-10 text-text-muted mx-auto" />

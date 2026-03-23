@@ -12,10 +12,10 @@ const isSession = computed(() => route.path.startsWith('/session'))
 <template>
     <!-- Fade overlay behind the nav -->
     <div v-if="!isSession" class="fixed bottom-0 inset-x-0 h-28 z-30 pointer-events-none"
-        style="background: linear-gradient(to top, rgba(10,10,10,0.85) 0%, rgba(10,10,10,0) 100%);" />
+        style="background: linear-gradient(to top, rgba(var(--color-bg-rgb), 0.85) 0%, rgba(var(--color-bg-rgb), 0) 100%);" />
 
     <nav v-if="!isSession" class="fixed bottom-4 inset-x-4 z-40">
-        <div class="flex bg-card border border-border rounded-2xl overflow-hidden shadow-lg">
+        <div class="flex bg-card border border-border rounded-2xl overflow-hidden shadow-[0_4px_24px_rgba(var(--color-bg-rgb),0.8)]">
             <NuxtLink
                 to="/"
                 class="flex-1 flex flex-col items-center py-3 gap-0.5 transition-colors"

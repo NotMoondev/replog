@@ -26,7 +26,7 @@ async function createWorkout() {
 
         <div class="bg-card border border-border rounded-2xl p-4 space-y-4">
             <input v-model="name" placeholder="Workout Name"
-                class="w-full bg-neutral-800 rounded-xl p-3 text-sm outline-none" />
+                class="w-full bg-surface rounded-xl p-3 text-sm outline-none" />
 
             <button @click="createWorkout"
                 class="w-full bg-primary-500 hover:bg-primary-600 rounded-2xl py-3 text-white font-medium transition">

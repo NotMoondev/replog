@@ -13,7 +13,7 @@ const { toasts, removeToast } = useToast()
                     :class="{
                         'bg-green-800 text-green-100': toast.type === 'success',
                         'bg-red-800 text-red-100': toast.type === 'error',
-                        'bg-neutral-700 text-white': toast.type === 'info',
+                        'bg-surface text-text': toast.type === 'info',
                     }"
                     @click="removeToast(toast.id)"
                 >
