@@ -148,8 +148,42 @@ async function finish() {
                 }
             }
         })
+
     leaveConfirmed.value = true
     await sessionStore.completeSession(workoutId.value, exercises)
+
+    // Neue Werte in Workout speichern
+    if (workout.value) {
+        for (const d of localData.value) {
+            const exIndex = workout.value.exercises.findIndex(e => e.id === d.exerciseId)
+            if (exIndex === -1) continue
+            const ex = workout.value.exercises[exIndex]
+
+            if (ex.type === 'strength') {
+                // Nur abgeschlossene Sätze übernehmen
+                const completedSets = d.sets.filter(s => s.completed)
+                if (completedSets.length === 0) continue
+                const updatedEx = {
+                    ...ex,
+                    sets: d.sets.map(s => ({
+                        reps: s.reps ?? ex.sets[d.sets.indexOf(s)]?.reps ?? 0,
+                        weight: s.weight,
+                    })),
+                }
+                await workoutStore.updateExercise(workoutId.value, exIndex, updatedEx)
+            } else {
+                // Cardio
+                if (!d.completed) continue
+                const updatedEx = {
+                    ...ex,
+                    duration: d.duration ?? ex.duration,
+                    metricValue: d.metricValue ?? ex.metricValue,
+                }
+                await workoutStore.updateExercise(workoutId.value, exIndex, updatedEx)
+            }
+        }
+    }
+
     saving.value = false
     router.back()
 }
