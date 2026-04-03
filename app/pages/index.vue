@@ -2,12 +2,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { useWorkoutStore } from '~/stores/useWorkoutStore'
 import { useTrainingPlanStore } from '~/stores/useTrainingPlanStore'
-import { db } from '~/utils/db'
+import { useSessionStore, computeVolume } from '~/stores/useSessionStore'
 
 const store = useWorkoutStore()
 const planStore = useTrainingPlanStore()
-
-const sessionCount = ref(0)
+const sessionStore = useSessionStore()
 
 const WEEKDAYS_SHORT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 
@@ -36,9 +35,98 @@ const weekDays = computed(() => {
     }))
 })
 
+// ── Metrics ──────────────────────────────────────────────────────────────────
+
+function startOfWeek(date: Date): Date {
+    const d = new Date(date)
+    // Monday-based
+    const day = (d.getDay() + 6) % 7
+    d.setDate(d.getDate() - day)
+    d.setHours(0, 0, 0, 0)
+    return d
+}
+
+const weeklyVolume = computed(() => {
+    const now = new Date()
+    const thisWeekStart = startOfWeek(now).getTime()
+    const lastWeekStart = thisWeekStart - 7 * 24 * 60 * 60 * 1000
+    let thisVol = 0
+    let lastVol = 0
+    for (const s of sessionStore.allSessions) {
+        const t = new Date(s.date).getTime()
+        if (t >= thisWeekStart) thisVol += computeVolume(s.exercises)
+        else if (t >= lastWeekStart) lastVol += computeVolume(s.exercises)
+    }
+    return { thisVol, lastVol }
+})
+
+const weeklyVolumeDelta = computed(() => {
+    const { thisVol, lastVol } = weeklyVolume.value
+    if (lastVol === 0) return null
+    return Math.round(((thisVol - lastVol) / lastVol) * 100)
+})
+
+const sessionsThisWeek = computed(() => {
+    const start = startOfWeek(new Date()).getTime()
+    return sessionStore.allSessions.filter(s => new Date(s.date).getTime() >= start).length
+})
+
+const streak = computed(() => {
+    if (sessionStore.allSessions.length === 0) return 0
+    // Build a set of unique training days (YYYY-MM-DD)
+    const days = new Set(
+        sessionStore.allSessions.map(s => s.date.slice(0, 10))
+    )
+    let count = 0
+    const d = new Date()
+    d.setHours(0, 0, 0, 0)
+    // If no session today, start checking from yesterday
+    const todayStr = d.toISOString().slice(0, 10)
+    if (!days.has(todayStr)) {
+        d.setDate(d.getDate() - 1)
+    }
+    while (true) {
+        const key = d.toISOString().slice(0, 10)
+        if (!days.has(key)) break
+        count++
+        d.setDate(d.getDate() - 1)
+    }
+    return count
+})
+
+const totalVolume = computed(() =>
+    sessionStore.allSessions.reduce((sum, s) => sum + computeVolume(s.exercises), 0)
+)
+
+const recentSessions = computed(() =>
+    sessionStore.allSessions.slice(0, 3)
+)
+
+function workoutName(workoutId: string): string {
+    return store.workouts.find(w => w.id === workoutId)?.name ?? 'Workout'
+}
+
+function formatSessionDate(iso: string): string {
+    const date = new Date(iso)
+    const now = new Date()
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
+    if (diffDays === 0) return 'Heute'
+    if (diffDays === 1) return 'Gestern'
+    if (diffDays < 7) return `vor ${diffDays} Tagen`
+    return date.toLocaleDateString('de-DE', { day: '2-digit', month: 'short' })
+}
+
+function formatVolume(kg: number): string {
+    if (kg >= 1000) return `${(kg / 1000).toFixed(1).replace('.', ',')} t`
+    return `${kg.toLocaleString('de-DE')} kg`
+}
+
 onMounted(async () => {
-    await Promise.all([store.loadWorkouts(), planStore.loadPlans()])
-    sessionCount.value = await db.sessions.count()
+    await Promise.all([
+        store.loadWorkouts(),
+        planStore.loadPlans(),
+        sessionStore.loadAllSessions(),
+    ])
 })
 </script>
 
@@ -71,14 +159,21 @@ onMounted(async () => {
         </div>
 
         <!-- Stats row -->
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-3 gap-3">
             <div class="bg-card border border-border rounded-2xl p-3 text-center">
                 <div class="text-2xl font-bold">{{ store.workouts.length }}</div>
                 <div class="text-xs text-text-muted mt-0.5">Workouts</div>
             </div>
             <div class="bg-card border border-border rounded-2xl p-3 text-center">
-                <div class="text-2xl font-bold">{{ sessionCount }}</div>
+                <div class="text-2xl font-bold">{{ sessionStore.allSessions.length }}</div>
                 <div class="text-xs text-text-muted mt-0.5">Sessions</div>
+            </div>
+            <div class="bg-card border border-border rounded-2xl p-3 text-center">
+                <div class="text-2xl font-bold flex items-center justify-center gap-1">
+                    {{ streak }}
+                    <IconFlame v-if="streak >= 3" class="size-5 text-orange-400" />
+                </div>
+                <div class="text-xs text-text-muted mt-0.5">Tage Streak</div>
             </div>
         </div>
 
@@ -162,25 +257,64 @@ onMounted(async () => {
             </div>
         </div>
 
-        <!-- Recent Workouts -->
-        <div class="bg-card border border-border rounded-2xl p-4 space-y-3">
-            <p class="text-xs font-semibold text-text-muted uppercase tracking-wider">Zuletzt trainiert</p>
+        <!-- Weekly metrics -->
+        <div v-if="sessionStore.allSessions.length > 0" class="bg-card border border-border rounded-2xl p-4 space-y-3">
+            <p class="text-xs font-semibold text-text-muted uppercase tracking-wider">Fortschritt</p>
+            <div class="grid grid-cols-2 gap-3">
+                <!-- Weekly volume -->
+                <div class="space-y-1">
+                    <div class="text-xs text-text-muted">Volumen diese Woche</div>
+                    <div class="font-bold text-lg leading-tight">{{ formatVolume(weeklyVolume.thisVol) }}</div>
+                    <div class="flex items-center gap-1 text-xs">
+                        <template v-if="weeklyVolumeDelta !== null">
+                            <span :class="weeklyVolumeDelta >= 0 ? 'text-green-400' : 'text-red-400'" class="font-semibold">
+                                {{ weeklyVolumeDelta >= 0 ? '+' : '' }}{{ weeklyVolumeDelta }}%
+                            </span>
+                            <span class="text-text-muted">vs. Vorwoche</span>
+                        </template>
+                        <span v-else class="text-text-muted">Erste Woche</span>
+                    </div>
+                </div>
+                <!-- Sessions this week -->
+                <div class="space-y-1">
+                    <div class="text-xs text-text-muted">Sessions diese Woche</div>
+                    <div class="font-bold text-lg leading-tight">{{ sessionsThisWeek }}</div>
+                    <div class="text-xs text-text-muted">Trainingseinheiten</div>
+                </div>
+            </div>
+            <!-- Total volume -->
+            <div class="border-t border-border pt-3 flex justify-between items-center">
+                <span class="text-xs text-text-muted">Gesamtvolumen aller Zeiten</span>
+                <span class="font-semibold text-sm">{{ formatVolume(totalVolume) }}</span>
+            </div>
+        </div>
 
-            <div v-if="store.workouts.length === 0" class="text-sm text-text-muted">
-                Noch keine Workouts erstellt.
+        <!-- Recent Sessions -->
+        <div class="bg-card border border-border rounded-2xl p-4 space-y-3">
+            <p class="text-xs font-semibold text-text-muted uppercase tracking-wider">Letzte Sessions</p>
+
+            <div v-if="recentSessions.length === 0" class="text-sm text-text-muted">
+                Noch keine Sessions absolviert.
             </div>
 
             <div v-else class="space-y-2">
                 <NuxtLink
-                    v-for="w in store.workouts.slice(0, 3)"
-                    :key="w.id"
-                    :to="`/workouts/${w.id}`"
-                    class="flex justify-between items-center py-1 hover:opacity-80 transition-opacity"
+                    v-for="s in recentSessions"
+                    :key="s.id"
+                    :to="`/sessions/${s.id}`"
+                    class="flex justify-between items-center py-1.5 hover:opacity-80 transition-opacity"
                 >
-                    <span class="text-sm font-medium">{{ w.name }}</span>
-                    <span class="text-xs text-text-muted">{{ w.exercises.length }} Übungen</span>
+                    <div class="min-w-0">
+                        <div class="text-sm font-medium truncate">{{ workoutName(s.workoutId) }}</div>
+                        <div class="text-xs text-text-muted">{{ s.exercises.length }} Übungen</div>
+                    </div>
+                    <span class="text-xs text-text-muted shrink-0 ml-3">{{ formatSessionDate(s.date) }}</span>
                 </NuxtLink>
             </div>
+
+            <NuxtLink v-if="sessionStore.allSessions.length > 3" to="/sessions" class="block text-xs text-primary-400 hover:text-primary-300 transition-colors pt-1">
+                Alle Sessions anzeigen →
+            </NuxtLink>
         </div>
     </div>
 </template>

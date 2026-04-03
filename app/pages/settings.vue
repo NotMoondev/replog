@@ -6,6 +6,16 @@ const { theme, setTheme } = useTheme()
 const importing = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 
+// Timer settings
+const timerEnabled = ref(localStorage.getItem('timerEnabled') !== 'false')
+const timerDuration = ref(parseInt(localStorage.getItem('timerDuration') ?? '90', 10))
+
+watch(timerEnabled, (val) => localStorage.setItem('timerEnabled', String(val)))
+watch(timerDuration, (val) => {
+    const parsed = Math.max(1, Math.round(val))
+    localStorage.setItem('timerDuration', String(parsed))
+})
+
 const themeOptions = [
     { value: 'dark', label: 'Dunkel', icon: 'IconMoon' },
     { value: 'light', label: 'Hell', icon: 'IconSun' },
@@ -77,6 +87,43 @@ async function handleImport(event: Event) {
             </div>
         </div>
 
+        <!-- Pause Timer -->
+        <div class="bg-card border border-border rounded-2xl p-4 space-y-4">
+            <div>
+                <h2 class="font-medium">Pause-Timer</h2>
+                <p class="text-sm text-text-muted mt-1">Automatischer Countdown nach jedem abgehakten Satz.</p>
+            </div>
+            <div class="flex items-center justify-between">
+                <span class="text-sm font-medium">Timer aktivieren</span>
+                <button
+                    @click="timerEnabled = !timerEnabled"
+                    class="relative w-11 h-6 rounded-full transition-colors shrink-0"
+                    :class="timerEnabled ? 'bg-primary-500' : 'bg-surface-hover border border-border'"
+                >
+                    <span
+                        class="absolute top-0.5 left-0.5 size-5 bg-white rounded-full shadow transition-transform duration-200"
+                        :class="timerEnabled ? 'translate-x-5' : 'translate-x-0'"
+                    />
+                </button>
+            </div>
+            <div v-if="timerEnabled" class="flex items-center gap-3">
+                <span class="text-sm text-text-muted flex-1">Pausendauer</span>
+                <div class="flex items-center gap-2">
+                    <button
+                        @click="timerDuration = Math.max(15, timerDuration - 15)"
+                        class="size-8 flex items-center justify-center bg-surface hover:bg-surface-hover border border-border rounded-lg text-sm transition-colors"
+                    >-</button>
+                    <span class="text-sm font-semibold w-16 text-center">
+                        {{ Math.floor(timerDuration / 60) > 0 ? `${Math.floor(timerDuration / 60)} min ` : '' }}{{ timerDuration % 60 > 0 ? `${timerDuration % 60}s` : '' }}
+                    </span>
+                    <button
+                        @click="timerDuration = timerDuration + 15"
+                        class="size-8 flex items-center justify-center bg-surface hover:bg-surface-hover border border-border rounded-lg text-sm transition-colors"
+                    >+</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Data Backup -->
         <div class="bg-card border border-border rounded-2xl p-4 space-y-4">
             <div>
@@ -85,7 +132,6 @@ async function handleImport(event: Event) {
                     Exportiere alle deine Daten als JSON-Datei und importiere sie bei Bedarf wieder.
                 </p>
             </div>
-
             <div class="space-y-3">
                 <button
                     @click="handleExport"

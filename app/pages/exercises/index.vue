@@ -37,7 +37,7 @@ async function handleDelete(id: string) {
             <h1 class="text-2xl font-semibold">Übungen</h1>
             <button
                 @click="showCreateModal = true"
-                class="bg-primary-500 hover:bg-primary-600 text-white rounded-xl px-4 py-2.5 font-semibold text-sm transition-colors flex items-center gap-1.5 shrink-0"
+                class="bg-primary-500 hover:bg-primary-600 text-white rounded-xl px-4 py-2 font-semibold text-sm transition-colors flex items-center gap-1.5 shrink-0"
             >
                 <IconPlus class="size-4" /> Erstellen
             </button>

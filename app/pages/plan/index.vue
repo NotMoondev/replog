@@ -4,6 +4,7 @@ import { useTrainingPlanStore } from '~/stores/useTrainingPlanStore'
 const store = useTrainingPlanStore()
 const router = useRouter()
 const newPlanName = ref('')
+const showCreateDrawer = ref(false)
 const confirmingDeleteId = ref<string | null>(null)
 const importInput = ref<HTMLInputElement | null>(null)
 const importing = ref(false)
@@ -17,6 +18,7 @@ async function create() {
     if (!trimmed) return
     const plan = await store.createPlan(trimmed)
     newPlanName.value = ''
+    showCreateDrawer.value = false
     router.push(`/plan/${plan.id}`)
 }
 
@@ -37,39 +39,33 @@ async function handleImport(event: Event) {
 
 <template>
     <div class="min-h-full bg-bg text-text p-4 space-y-6">
-        <h1 class="text-2xl font-semibold">Trainingspläne</h1>
-
-        <!-- Create -->
-        <div class="flex gap-2">
-            <input
-                v-model="newPlanName"
-                placeholder="Neuer Plan"
-                @keyup.enter="create"
-                class="flex-1 bg-surface border border-border rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-500 transition-colors"
-            />
-            <button
-                @click="create"
-                class="bg-primary-500 hover:bg-primary-600 text-white rounded-xl px-4 py-2.5 font-semibold text-sm transition-colors flex items-center gap-1.5 shrink-0"
-            >
-                <IconPlus class="size-4" /> Erstellen
-            </button>
-            <!-- Import -->
-            <input
-                ref="importInput"
-                type="file"
-                accept=".json,application/json"
-                class="hidden"
-                @change="handleImport"
-            />
-            <button
-                @click="importInput?.click()"
-                :disabled="importing"
-                class="bg-surface border border-border hover:border-primary-500 text-text rounded-xl px-3 py-2.5 text-sm transition-colors flex items-center gap-1.5 shrink-0 disabled:opacity-50"
-                title="Plan importieren"
-            >
-                <IconLoaderCircle v-if="importing" class="size-4 animate-spin" />
-                <IconDownload v-else class="size-4" />
-            </button>
+        <div class="flex justify-between items-center">
+            <h1 class="text-2xl font-semibold">Trainingspläne</h1>
+            <div class="flex items-center gap-2">
+                <!-- Import -->
+                <input
+                    ref="importInput"
+                    type="file"
+                    accept=".json,application/json"
+                    class="hidden"
+                    @change="handleImport"
+                />
+                <button
+                    @click="importInput?.click()"
+                    :disabled="importing"
+                    class="bg-surface border border-border hover:border-primary-500 text-text rounded-xl px-3 py-2 text-sm transition-colors flex items-center gap-1.5 shrink-0 disabled:opacity-50"
+                    title="Plan importieren"
+                >
+                    <IconLoaderCircle v-if="importing" class="size-4 animate-spin" />
+                    <IconDownload v-else class="size-4" />
+                </button>
+                <button
+                    @click="showCreateDrawer = true"
+                    class="bg-primary-500 hover:bg-primary-600 text-white rounded-xl px-4 py-2 font-semibold text-sm transition-colors flex items-center gap-1.5 shrink-0"
+                >
+                    <IconPlus class="size-4" /> Erstellen
+                </button>
+            </div>
         </div>
 
         <!-- Loading -->
@@ -149,9 +145,28 @@ async function handleImport(event: Event) {
             <div v-if="store.plans.length === 0" class="text-center py-16 space-y-2">
                 <IconCalendar class="size-10 text-text-muted mx-auto" />
                 <p class="text-sm text-text-muted">Noch keine Trainingspläne vorhanden.</p>
-                <p class="text-xs text-text-muted">Erstelle deinen ersten Plan oben.</p>
+                <p class="text-xs text-text-muted">Tippe auf "Erstellen" um deinen ersten Plan anzulegen.</p>
             </div>
         </div>
     </div>
+
+    <!-- Create Drawer -->
+    <BottomDrawer :open="showCreateDrawer" @close="showCreateDrawer = false; newPlanName = ''">
+        <h2 class="font-semibold text-lg">Neuer Trainingsplan</h2>
+        <input
+            v-model="newPlanName"
+            placeholder="Name des Plans"
+            @keyup.enter="create"
+            autofocus
+            class="w-full bg-surface border border-border rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-500 transition-colors"
+        />
+        <button
+            @click="create"
+            :disabled="!newPlanName.trim()"
+            class="w-full bg-primary-500 hover:bg-primary-600 disabled:opacity-40 text-white rounded-xl py-3 font-semibold text-sm transition-colors"
+        >
+            Erstellen
+        </button>
+    </BottomDrawer>
 </template>
 

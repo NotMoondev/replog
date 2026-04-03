@@ -14,5 +14,6 @@ export interface WorkoutSession {
     id: string
     workoutId: string
     date: string
+    durationSeconds?: number
     exercises: WorkoutSessionExercise[]
 }

@@ -28,6 +28,23 @@ const workout = computed(() => workoutStore.workouts.find(w => w.id === workoutI
 const localData = ref<LocalExercise[]>([])
 const lastSession = ref<Awaited<ReturnType<typeof sessionStore.getLastSessionForWorkout>>>(null)
 const saving = ref(false)
+const sessionStartTime = ref(0)
+
+const timer = useTimer()
+const totalCompletedSets = computed(() => {
+    let count = 0
+    for (const d of localData.value) {
+        if (d.sets.length > 0) {
+            count += d.sets.filter(s => s.completed).length
+        } else if (d.completed) {
+            count++
+        }
+    }
+    return count
+})
+watch(totalCompletedSets, (newVal, oldVal) => {
+    if (newVal > oldVal) timer.start()
+})
 
 // Leave guard
 const showLeaveDialog = ref(false)
@@ -60,6 +77,7 @@ function confirmLeave() {
 }
 
 onMounted(async () => {
+    sessionStartTime.value = Date.now()
     window.addEventListener('beforeunload', handleBeforeUnload)
     await workoutStore.loadWorkouts()
     lastSession.value = await sessionStore.getLastSessionForWorkout(workoutId.value)
@@ -149,8 +167,9 @@ async function finish() {
             }
         })
 
+    const durationSeconds = Math.round((Date.now() - sessionStartTime.value) / 1000)
     leaveConfirmed.value = true
-    await sessionStore.completeSession(workoutId.value, exercises)
+    await sessionStore.completeSession(workoutId.value, exercises, durationSeconds)
 
     // Neue Werte in Workout speichern
     if (workout.value) {
@@ -158,7 +177,7 @@ async function finish() {
             const exIndex = workout.value.exercises.findIndex(e => e.id === d.exerciseId)
             if (exIndex === -1) continue
             const ex = workout.value.exercises[exIndex]
-
+            if (!ex) continue
             if (ex.type === 'strength') {
                 // Nur abgeschlossene Sätze übernehmen
                 const completedSets = d.sets.filter(s => s.completed)
@@ -196,6 +215,40 @@ async function finish() {
         </div>
 
         <template v-else>
+            <!-- Pause Timer Banner -->
+            <Transition
+                enter-active-class="transition duration-300 ease-out"
+                enter-from-class="opacity-0 -translate-y-2"
+                enter-to-class="opacity-100 translate-y-0"
+                leave-active-class="transition duration-200 ease-in"
+                leave-from-class="opacity-100 translate-y-0"
+                leave-to-class="opacity-0 -translate-y-2"
+            >
+                <div v-if="timer.isRunning.value" class="bg-primary-500/15 border border-primary-500/40 rounded-2xl p-3 flex items-center justify-between sticky top-4 z-10">
+                    <div class="flex items-center gap-3">
+                        <IconTimer class="size-5 text-primary-400 shrink-0" />
+                        <div>
+                            <div class="text-xs text-text-muted">Pause</div>
+                            <div class="text-2xl font-mono font-semibold text-primary-400">{{ timer.formattedRemaining.value }}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button
+                            @click="timer.reset()"
+                            class="text-xs bg-surface hover:bg-surface-hover border border-border rounded-lg px-3 py-1.5 transition-colors font-medium"
+                        >
+                            Neu starten
+                        </button>
+                        <button
+                            @click="timer.stop()"
+                            class="text-xs text-text-muted hover:text-text transition-colors px-2 py-1.5"
+                        >
+                            <IconX class="size-4" />
+                        </button>
+                    </div>
+                </div>
+            </Transition>
+
             <div>
                 <h1 class="text-2xl font-semibold">{{ workout.name }}</h1>
                 <p class="text-sm text-text-muted">

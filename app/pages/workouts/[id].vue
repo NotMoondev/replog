@@ -3,6 +3,7 @@ import { useWorkoutStore } from '~/stores/useWorkoutStore'
 import type { Exercise } from '~/types/workout'
 
 const route = useRoute()
+const router = useRouter()
 const store = useWorkoutStore()
 
 const workout = computed(() =>
@@ -12,6 +13,7 @@ const workout = computed(() =>
 const showModal = ref(false)
 const showPicker = ref(false)
 const editingExercise = ref<{ exercise: Exercise; index: number } | null>(null)
+const confirmingDelete = ref(false)
 
 // Inline rename
 const editingName = ref(false)
@@ -48,6 +50,18 @@ function openEditExercise(exercise: Exercise, index: number) {
 async function handleDeleteExercise(exerciseId: string) {
     if (!workout.value) return
     await store.deleteExercise(workout.value.id, exerciseId)
+}
+
+async function handleClone() {
+    if (!workout.value) return
+    await store.cloneWorkout(workout.value.id)
+    router.back()
+}
+
+async function handleDelete() {
+    if (!workout.value) return
+    await store.deleteWorkout(workout.value.id)
+    router.replace('/workouts')
 }
 </script>
 
@@ -114,6 +128,39 @@ async function handleDeleteExercise(exerciseId: string) {
                 class="w-full bg-surface hover:bg-surface-hover rounded-xl py-3 font-semibold text-sm transition-colors">
                 + Übung hinzufügen
             </button>
+
+            <!-- Secondary actions -->
+            <div class="flex gap-2">
+                <button
+                    @click="handleClone"
+                    class="flex items-center justify-center gap-2 bg-surface hover:bg-surface-hover border border-border rounded-xl py-2.5 px-4 text-sm font-medium transition-colors text-text-muted hover:text-text"
+                    title="Duplizieren"
+                >
+                    <IconCopy class="size-4" />
+                </button>
+                <template v-if="confirmingDelete">
+                    <button
+                        @click="handleDelete"
+                        class="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl py-2.5 px-4 text-sm font-semibold transition-colors"
+                    >
+                        Löschen
+                    </button>
+                    <button
+                        @click="confirmingDelete = false"
+                        class="flex items-center justify-center bg-surface hover:bg-surface-hover border border-border rounded-xl py-2.5 px-3 transition-colors text-text-muted hover:text-text"
+                    >
+                        <IconX class="size-4" />
+                    </button>
+                </template>
+                <button
+                    v-else
+                    @click="confirmingDelete = true"
+                    class="flex items-center justify-center gap-2 bg-surface hover:bg-surface-hover border border-border rounded-xl py-2.5 px-4 text-sm font-medium transition-colors text-text-muted hover:text-red-400"
+                    title="Workout löschen"
+                >
+                    <IconTrash2 class="size-4" />
+                </button>
+            </div>
 
             <!-- Picker Modal (from library or create new) -->
             <ExercisePickerModal v-if="showPicker" @close="showPicker = false" :workoutId="workout.id" />

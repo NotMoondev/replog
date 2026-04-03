@@ -2,11 +2,11 @@
 const route = useRoute()
 
 const isHome = computed(() => route.path === '/')
-const isExercises = computed(() => route.path.startsWith('/exercises'))
 const isWorkouts = computed(() => route.path.startsWith('/workouts'))
 const isPlan = computed(() => route.path.startsWith('/plan'))
+const isSessions = computed(() => route.path.startsWith('/sessions'))
 const isStats = computed(() => route.path.startsWith('/stats'))
-const isSession = computed(() => route.path.startsWith('/session'))
+const isSession = computed(() => route.path.startsWith('/session/') || route.path === '/session')
 </script>
 
 <template>
@@ -26,12 +26,12 @@ const isSession = computed(() => route.path.startsWith('/session'))
             </NuxtLink>
 
             <NuxtLink
-                to="/exercises"
+                to="/plan"
                 class="flex-1 flex flex-col items-center py-3 gap-0.5 transition-colors"
-                :class="isExercises ? 'text-primary-500' : 'text-text-muted'"
+                :class="isPlan ? 'text-primary-500' : 'text-text-muted'"
             >
-                <IconListChecks class="size-5" />
-                <span class="text-[10px] font-medium">Übungen</span>
+                <IconCalendar class="size-5" />
+                <span class="text-[10px] font-medium">Plan</span>
             </NuxtLink>
 
             <NuxtLink
@@ -44,12 +44,12 @@ const isSession = computed(() => route.path.startsWith('/session'))
             </NuxtLink>
 
             <NuxtLink
-                to="/plan"
+                to="/sessions"
                 class="flex-1 flex flex-col items-center py-3 gap-0.5 transition-colors"
-                :class="isPlan ? 'text-primary-500' : 'text-text-muted'"
+                :class="isSessions ? 'text-primary-500' : 'text-text-muted'"
             >
-                <IconCalendar class="size-5" />
-                <span class="text-[10px] font-medium">Plan</span>
+                <IconClipboardList class="size-5" />
+                <span class="text-[10px] font-medium">Sessions</span>
             </NuxtLink>
 
             <NuxtLink
