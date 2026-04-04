@@ -8,7 +8,12 @@ const props = defineProps<{
     exerciseIndex?: number
 }>()
 
-const emit = defineEmits(['close'])
+import type { Exercise } from '~/types/workout'
+
+const emit = defineEmits<{
+    close: []
+    created: [Exercise]
+}>()
 
 const workoutStore = useWorkoutStore()
 const exerciseStore = useExerciseStore()
@@ -111,12 +116,16 @@ async function save() {
             await exerciseStore.updateExercise(exercise)
         } else {
             await exerciseStore.createExercise(exercise)
+            emit('created', exercise)
         }
     } else {
         if (isEdit.value) {
             await workoutStore.updateExercise(props.workoutId!, props.exerciseIndex!, exercise)
         } else {
             await workoutStore.addExercise(props.workoutId!, exercise)
+            // Also register in global exercise library
+            await exerciseStore.createExercise({ ...exercise, id: crypto.randomUUID() })
+            emit('created', exercise)
         }
     }
 

@@ -43,10 +43,11 @@ export const useSessionStore = defineStore('sessions', {
             this.loading = false
         },
 
-        async completeSession(workoutId: string, exercises: WorkoutSessionExercise[], durationSeconds?: number): Promise<WorkoutSession> {
+        async completeSession(workoutId: string, exercises: WorkoutSessionExercise[], durationSeconds?: number, workoutName?: string): Promise<WorkoutSession> {
             const session: WorkoutSession = {
                 id: crypto.randomUUID(),
                 workoutId,
+                workoutName,
                 date: new Date().toISOString(),
                 durationSeconds,
                 exercises,

@@ -40,11 +40,13 @@ const volumeDeltaPercent = computed(() => {
     return Math.round(((currentVolume.value - prevVolume.value) / prevVolume.value) * 100)
 })
 
-function exerciseName(exerciseId: string): string {
-    return workout.value?.exercises.find(e => e.id === exerciseId)?.name ?? exerciseId
+function exerciseName(ex: WorkoutSessionExercise): string {
+    return workout.value?.exercises.find(e => e.id === ex.exerciseId)?.name
+        ?? ex.exerciseName
+        ?? ex.exerciseId
 }
 
-// PRs: highest weight per exercise across ALL sessions for same workout
+// PRs: highest weight (or reps for bodyweight) per exercise across ALL sessions for same workout
 const prMap = computed(() => {
     if (!session.value) return new Map<string, number>()
     const map = new Map<string, number>()
@@ -52,21 +54,55 @@ const prMap = computed(() => {
         if (s.workoutId !== session.value.workoutId || s.id === session.value.id) continue
         for (const ex of s.exercises) {
             if (!ex.sets) continue
+            const usesWeight = ex.sets.some(set => (set.weight ?? 0) > 0)
             for (const set of ex.sets) {
+                const val = usesWeight ? (set.weight ?? 0) : set.reps
                 const prev = map.get(ex.exerciseId) ?? 0
-                if ((set.weight ?? 0) > prev) map.set(ex.exerciseId, set.weight ?? 0)
+                if (val > prev) map.set(ex.exerciseId, val)
             }
         }
     }
     return map
 })
 
+// True if this exercise has no weight recorded (bodyweight)
+function isBodyweight(ex: WorkoutSessionExercise): boolean {
+    if (!ex.sets || ex.sets.length === 0) return false
+    return ex.sets.every(s => (s.weight ?? 0) === 0)
+}
+
 function isNewPR(ex: WorkoutSessionExercise): boolean {
     if (!ex.sets || ex.sets.length === 0) return false
-    const maxWeight = Math.max(...ex.sets.map(s => s.weight ?? 0))
-    if (maxWeight === 0) return false
+    const bodyweight = isBodyweight(ex)
+    const maxVal = Math.max(...ex.sets.map(s => bodyweight ? s.reps : (s.weight ?? 0)))
+    if (maxVal === 0) return false
     const prev = prMap.value.get(ex.exerciseId) ?? 0
-    return maxWeight > prev
+    return maxVal > prev
+}
+
+// Per-set comparison: returns 'better' | 'worse' | 'same' | null
+function setComparison(ex: WorkoutSessionExercise, setIndex: number): { label: string; dir: 'better' | 'worse' | 'same' } | null {
+    const lastEx = getLastExercise(ex.exerciseId)
+    const lastSet = lastEx?.sets?.[setIndex]
+    const curSet = ex.sets?.[setIndex]
+    if (!lastSet || !curSet) return null
+
+    if (isBodyweight(ex)) {
+        // Compare reps
+        const diff = curSet.reps - lastSet.reps
+        return {
+            label: `${lastSet.reps} Wdh`,
+            dir: diff > 0 ? 'better' : diff < 0 ? 'worse' : 'same',
+        }
+    } else {
+        // Compare weight
+        const cur = curSet.weight ?? 0
+        const prev = lastSet.weight ?? 0
+        return {
+            label: prev > 0 ? `${prev} kg` : '—',
+            dir: cur > prev ? 'better' : cur < prev ? 'worse' : 'same',
+        }
+    }
 }
 
 function getLastExercise(exerciseId: string): WorkoutSessionExercise | null {
@@ -99,7 +135,7 @@ function formatDuration(seconds?: number): string | null {
                     <IconChevronLeft class="size-6" />
                 </button>
                 <div class="min-w-0">
-                    <h1 class="text-xl font-semibold truncate">{{ workout?.name ?? 'Session' }}</h1>
+                    <h1 class="text-xl font-semibold truncate">{{ workout?.name ?? session.workoutName ?? 'Session' }}</h1>
                     <p class="text-sm text-text-muted flex items-center gap-2 flex-wrap">
                         <span>{{ formatDate(session.date) }}</span>
                         <span v-if="formatDuration(session.durationSeconds)" class="flex items-center gap-1">
@@ -146,7 +182,7 @@ function formatDuration(seconds?: number): string | null {
                 >
                     <!-- Exercise header -->
                     <div class="flex items-center justify-between">
-                        <h3 class="font-semibold text-sm">{{ exerciseName(ex.exerciseId) }}</h3>
+                        <h3 class="font-semibold text-sm">{{ exerciseName(ex) }}</h3>
                         <span v-if="isNewPR(ex)" class="text-xs bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded-full px-2 py-0.5 flex items-center gap-1">
                             🏆 Neues PR
                         </span>
@@ -158,7 +194,7 @@ function formatDuration(seconds?: number): string | null {
                             <div class="grid grid-cols-4 text-xs text-text-muted mb-2 px-1">
                                 <span>Satz</span>
                                 <span class="text-center">Wdh</span>
-                                <span class="text-center">Gewicht</span>
+                                <span class="text-center">{{ isBodyweight(ex) ? '—' : 'Gewicht' }}</span>
                                 <span class="text-center text-primary-400">vs. letzte</span>
                             </div>
                             <div
@@ -169,12 +205,12 @@ function formatDuration(seconds?: number): string | null {
                                 <span class="text-text-muted">{{ i + 1 }}</span>
                                 <span class="text-center font-medium">{{ set.reps }}</span>
                                 <span class="text-center font-medium">
-                                    {{ set.weight != null ? `${set.weight} kg` : '—' }}
+                                    {{ set.weight != null && set.weight > 0 ? `${set.weight} kg` : '—' }}
                                 </span>
                                 <span class="text-center text-xs">
-                                    <template v-if="getLastExercise(ex.exerciseId)?.sets?.[i]">
-                                        <span :class="(set.weight ?? 0) > (getLastExercise(ex.exerciseId)!.sets![i]!.weight ?? 0) ? 'text-green-400' : (set.weight ?? 0) < (getLastExercise(ex.exerciseId)!.sets![i]!.weight ?? 0) ? 'text-red-400' : 'text-text-muted'">
-                                            {{ getLastExercise(ex.exerciseId)?.sets?.[i]?.weight != null ? `${getLastExercise(ex.exerciseId)!.sets![i]!.weight} kg` : '—' }}
+                                    <template v-if="setComparison(ex, i)">
+                                        <span :class="setComparison(ex, i)!.dir === 'better' ? 'text-green-400' : setComparison(ex, i)!.dir === 'worse' ? 'text-red-400' : 'text-text-muted'">
+                                            {{ setComparison(ex, i)!.label }}
                                         </span>
                                     </template>
                                     <span v-else class="text-text-muted">—</span>

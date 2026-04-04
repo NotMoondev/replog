@@ -4,11 +4,13 @@ import { useWorkoutStore } from '~/stores/useWorkoutStore'
 import type { Exercise } from '~/types/workout'
 
 const props = defineProps<{
-    workoutId: string
+    workoutId?: string
+    sessionMode?: boolean
 }>()
 
 const emit = defineEmits<{
     close: []
+    select: [Exercise]
 }>()
 
 const exerciseStore = useExerciseStore()
@@ -29,16 +31,30 @@ const filteredExercises = computed(() => {
 })
 
 async function addToWorkout(exercise: Exercise) {
+    if (props.sessionMode) {
+        emit('select', exercise)
+        emit('close')
+        return
+    }
     adding.value = exercise.id
     const copy: Exercise = JSON.parse(JSON.stringify(exercise))
     copy.id = crypto.randomUUID()
-    await workoutStore.addExercise(props.workoutId, copy)
+    await workoutStore.addExercise(props.workoutId!, copy)
     adding.value = null
     emit('close')
 }
 
+function onExerciseCreated(exercise: Exercise) {
+    if (props.sessionMode) {
+        showCreateModal.value = false
+        emit('select', exercise)
+        emit('close')
+    }
+}
+
 function onCreateModalClose() {
     showCreateModal.value = false
+    if (!props.sessionMode) emit('close')
 }
 </script>
 
@@ -139,7 +155,8 @@ function onCreateModalClose() {
     <!-- Nested modal: create new exercise directly into workout -->
     <ExerciseModal
         v-if="showCreateModal"
-        :workoutId="workoutId"
-        @close="emit('close')"
+        :workoutId="sessionMode ? undefined : workoutId"
+        @close="onCreateModalClose"
+        @created="onExerciseCreated"
     />
 </template>

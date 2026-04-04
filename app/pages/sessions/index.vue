@@ -12,8 +12,10 @@ onMounted(async () => {
     ])
 })
 
-function workoutName(workoutId: string): string {
-    return workoutStore.workouts.find(w => w.id === workoutId)?.name ?? 'Unbekanntes Workout'
+function workoutName(workoutId: string, sessionIndex: number): string {
+    return workoutStore.workouts.find(w => w.id === workoutId)?.name
+        ?? sessionStore.allSessions[sessionIndex]?.workoutName
+        ?? 'Unbekanntes Workout'
 }
 
 function formatDate(iso: string): string {
@@ -66,7 +68,7 @@ function volumeDelta(sessionIndex: number): { value: number; percent: number } |
             >
                 <div class="flex justify-between items-start gap-3">
                     <div class="min-w-0">
-                        <div class="font-semibold text-sm truncate">{{ workoutName(session.workoutId) }}</div>
+                        <div class="font-semibold text-sm truncate">{{ workoutName(session.workoutId, i) }}</div>
                         <div class="text-xs text-text-muted mt-0.5 flex items-center gap-2">
                             <span>{{ formatDate(session.date) }}</span>
                             <span v-if="formatDuration(session.durationSeconds)" class="flex items-center gap-1">

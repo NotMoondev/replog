@@ -1,5 +1,6 @@
 export interface WorkoutSessionExercise {
     exerciseId: string
+    exerciseName?: string
 
     sets?: {
         reps: number
@@ -13,6 +14,7 @@ export interface WorkoutSessionExercise {
 export interface WorkoutSession {
     id: string
     workoutId: string
+    workoutName?: string
     date: string
     durationSeconds?: number
     exercises: WorkoutSessionExercise[]

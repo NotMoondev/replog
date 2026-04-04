@@ -14,6 +14,7 @@ interface LocalExercise {
     sets: LocalSet[]
     duration?: number
     metricValue?: number
+    skipped?: boolean
 }
 
 const props = defineProps<{
@@ -33,18 +34,18 @@ function update(patch: Partial<LocalExercise>) {
 function updateSet(index: number, patch: Partial<LocalSet>) {
     const newSets = [...props.modelValue.sets]
     const existing = newSets[index]!
-    newSets[index] = { ...existing, ...patch, completed: patch.completed ?? existing.completed }
+    newSets[index] = { ...existing, ...patch }
     update({ sets: newSets })
+}
+
+function toggleSetComplete(index: number) {
+    const set = props.modelValue.sets[index]
+    if (!set) return
+    updateSet(index, { completed: !set.completed })
 }
 
 function lastSet(index: number) {
     return props.lastExercise?.sets?.[index]
-}
-
-function copyFromPrevSet(index: number) {
-    const prev = props.modelValue.sets[index - 1]
-    if (!prev) return
-    updateSet(index, { reps: prev.reps, weight: prev.weight })
 }
 
 const metricLabel = computed(() => {
@@ -54,7 +55,6 @@ const metricLabel = computed(() => {
     return ''
 })
 
-// Derive unit from exercise default (use min if exercise duration is a whole minute)
 const durationUnit = computed((): 's' | 'min' => {
     if (props.exercise.type !== 'cardio') return 's'
     const d = (props.exercise as any).duration ?? 0
@@ -75,77 +75,248 @@ const durationDisplay = computed({
     },
 })
 
-const isPartiallyDone = computed(() => {
-    if (props.exercise.type === 'strength') return props.modelValue.sets.some(s => s.completed)
-    return props.modelValue.completed
-})
+const completedSetCount = computed(() => props.modelValue.sets.filter(s => s.completed).length)
+const totalSetCount = computed(() => props.modelValue.sets.length)
+
+// ── Swipe gesture ──────────────────────────────────────────────────────────
+const dragX = ref(0)
+const isDragging = ref(false)
+let touchStartX = 0
+let touchStartY = 0
+let isHorizontalSwipe = false
+
+const SWIPE_THRESHOLD = 72
+
+function onTouchStart(e: TouchEvent) {
+    touchStartX = e.touches[0]!.clientX
+    touchStartY = e.touches[0]!.clientY
+    isDragging.value = true
+    isHorizontalSwipe = false
+    dragX.value = 0
+}
+
+function onTouchMove(e: TouchEvent) {
+    if (!isDragging.value) return
+    const dx = e.touches[0]!.clientX - touchStartX
+    const dy = e.touches[0]!.clientY - touchStartY
+
+    if (!isHorizontalSwipe) {
+        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 8) {
+            isHorizontalSwipe = true
+        } else if (Math.abs(dy) > 8) {
+            isDragging.value = false
+            return
+        } else {
+            return
+        }
+    }
+
+    e.preventDefault()
+    const skipped = !!props.modelValue.skipped
+    if (!skipped && dx < 0) {
+        dragX.value = Math.max(dx, -150)
+    } else if (skipped && dx > 0) {
+        dragX.value = Math.min(dx, 150)
+    } else {
+        dragX.value = 0
+    }
+}
+
+function onTouchEnd() {
+    isDragging.value = false
+    const skipped = !!props.modelValue.skipped
+    if (!skipped && dragX.value <= -SWIPE_THRESHOLD) {
+        update({ skipped: true })
+    } else if (skipped && dragX.value >= SWIPE_THRESHOLD) {
+        update({ skipped: false })
+    }
+    dragX.value = 0
+}
+
+const cardStyle = computed(() => ({
+    transform: `translateX(${dragX.value}px)`,
+    transition: isDragging.value ? 'none' : 'transform 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+}))
+
+const swipeProgress = computed(() => Math.min(Math.abs(dragX.value) / SWIPE_THRESHOLD, 1))
 </script>
 
 <template>
-    <div class="bg-card border rounded-2xl p-4 space-y-3 transition-colors"
-        :class="isPartiallyDone ? 'border-primary-500/50' : 'border-border'">
-        <!-- Header -->
-        <div class="flex justify-between items-start">
-            <div>
-                <h3 class="font-medium">{{ exercise.name }}</h3>
-                <span class="text-xs text-text-muted">{{ exercise.type === 'strength' ? 'Kraft' : 'Cardio' }}</span>
+    <div
+        class="relative overflow-hidden rounded-2xl"
+        @touchstart.passive="onTouchStart"
+        @touchmove="onTouchMove"
+        @touchend.passive="onTouchEnd"
+    >
+        <!-- Swipe bg: skip (drag left, shown when not skipped) -->
+        <div
+            class="absolute inset-0 flex items-center justify-end pr-5 bg-red-500/15 rounded-2xl"
+            :style="{ opacity: !modelValue.skipped ? swipeProgress : 0 }"
+        >
+            <div class="flex flex-col items-center gap-0.5">
+                <IconX class="size-5 text-red-400" />
+                <span class="text-xs text-red-400 font-medium">Überspringen</span>
+            </div>
+        </div>
+        <!-- Swipe bg: restore (drag right, shown when skipped) -->
+        <div
+            class="absolute inset-0 flex items-center justify-start pl-5 bg-green-500/15 rounded-2xl"
+            :style="{ opacity: modelValue.skipped ? swipeProgress : 0 }"
+        >
+            <div class="flex flex-col items-center gap-0.5">
+                <IconRotateCcw class="size-5 text-green-400" />
+                <span class="text-xs text-green-400 font-medium">Wiederherstellen</span>
             </div>
         </div>
 
-        <!-- Strength: sets -->
-        <div v-if="exercise.type === 'strength'" class="space-y-2">
-            <div v-for="(set, i) in modelValue.sets" :key="i" class="flex items-center gap-2 transition-opacity"
-                :class="set.completed ? 'opacity-50' : ''">
-                <input type="checkbox" :checked="set.completed"
-                    @change="updateSet(i, { completed: ($event.target as HTMLInputElement).checked })"
-                    class="w-4 h-4 accent-primary-500 shrink-0" />
-
-                <span class="text-xs text-text-muted w-10 shrink-0">Set {{ i + 1 }}</span>
-
-                <div class="flex gap-2 flex-1">
-                    <input type="number" :value="set.reps"
-                        @input="updateSet(i, { reps: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
-                        placeholder="Wdh"
-                        class="w-full bg-surface border border-border rounded-xl px-2.5 py-2 text-sm outline-none focus:border-primary-500 transition-colors" />
-                    <input type="number" :value="set.weight"
-                        @input="updateSet(i, { weight: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
-                        placeholder="kg"
-                        class="w-full bg-surface border border-border rounded-xl px-2.5 py-2 text-sm outline-none focus:border-primary-500 transition-colors" />
-                    <button v-if="i > 0 && (modelValue.sets[i - 1]?.reps != null || modelValue.sets[i - 1]?.weight != null)"
-                        @click="copyFromPrevSet(i)"
-                        class="shrink-0 text-text-muted hover:text-primary-400 transition-colors"
-                        title="Vom vorherigen Set übernehmen">
-                        <IconCopy class="size-3.5" />
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Cardio -->
-        <div v-else class="space-y-3">
-            <label class="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" :checked="modelValue.completed"
-                    @change="update({ completed: ($event.target as HTMLInputElement).checked })"
-                    class="w-4 h-4 accent-primary-500" />
-                <span class="text-sm text-text-muted">Erledigt</span>
-            </label>
-
-            <div class="flex gap-2" :class="modelValue.completed ? 'opacity-50' : ''">
-                <div class="relative flex-1">
-                    <input type="number" :value="durationDisplay"
-                        @input="durationDisplay = ($event.target as HTMLInputElement).valueAsNumber || undefined"
-                        :placeholder="durationUnit === 'min' ? 'Min' : 'Sek'"
-                        class="w-full bg-surface border border-border rounded-xl px-2.5 py-2 pr-12 text-sm outline-none focus:border-primary-500 transition-colors" />
-                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-muted pointer-events-none">
-                        {{ durationUnit === 'min' ? 'min' : 's' }}
+        <!-- Card body -->
+        <div
+            class="border rounded-2xl p-4 space-y-3 relative select-none"
+            :class="[
+                modelValue.skipped
+                    ? 'bg-surface/40 border-border/40 opacity-55'
+                    : (completedSetCount > 0 || modelValue.completed)
+                        ? 'bg-card border-primary-500/40'
+                        : 'bg-card border-border'
+            ]"
+            :style="cardStyle"
+        >
+            <!-- Header -->
+            <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <h3
+                            class="font-semibold text-base leading-tight"
+                            :class="modelValue.skipped ? 'line-through text-text-muted' : ''"
+                        >
+                            {{ exercise.name }}
+                        </h3>
+                        <span
+                            v-if="modelValue.skipped"
+                            class="text-xs bg-red-500/20 text-red-400 border border-red-500/30 rounded-full px-2 py-0.5 font-medium shrink-0"
+                        >
+                            Übersprungen
+                        </span>
+                    </div>
+                    <span class="text-xs text-text-muted">
+                        {{ exercise.type === 'strength' ? 'Kraft' : 'Cardio' }}
                     </span>
                 </div>
-
-                <input v-if="exercise.metric !== 'none'" type="number" :value="modelValue.metricValue"
-                    @input="update({ metricValue: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
-                    :placeholder="metricLabel"
-                    class="w-full bg-surface border border-border rounded-xl px-2.5 py-2 text-sm outline-none focus:border-primary-500 transition-colors" />
+                <!-- Set counter badge (strength only, when not skipped) -->
+                <div v-if="exercise.type === 'strength' && !modelValue.skipped" class="shrink-0 text-right">
+                    <div
+                        class="text-xs font-bold tabular-nums"
+                        :class="completedSetCount === totalSetCount && totalSetCount > 0 ? 'text-primary-400' : 'text-text-muted'"
+                    >
+                        {{ completedSetCount }}/{{ totalSetCount }}
+                    </div>
+                    <div class="text-xs text-text-muted">Sets</div>
+                </div>
             </div>
+
+            <!-- Skipped hint -->
+            <p v-if="modelValue.skipped" class="text-xs text-text-muted text-center pb-1">
+                ← Nach rechts wischen zum Wiederherstellen
+            </p>
+
+            <template v-else>
+                <!-- ── Strength ── -->
+                <div v-if="exercise.type === 'strength'" class="space-y-1.5">
+                    <!-- Column headers -->
+                    <div class="grid gap-2 px-1 mb-1" style="grid-template-columns: 1.75rem 1fr 1fr 2.25rem">
+                        <span></span>
+                        <span class="text-xs text-text-muted text-center">Wdh</span>
+                        <span class="text-xs text-text-muted text-center">kg</span>
+                        <span></span>
+                    </div>
+
+                    <div
+                        v-for="(set, i) in modelValue.sets"
+                        :key="i"
+                        class="grid items-center gap-2 rounded-xl px-1 py-0.5 transition-all"
+                        :class="set.completed ? 'opacity-45' : ''"
+                        style="grid-template-columns: 1.75rem 1fr 1fr 2.25rem"
+                    >
+                        <!-- Set number -->
+                        <span class="text-xs font-bold text-text-muted text-center tabular-nums">
+                            {{ i + 1 }}
+                        </span>
+
+                        <!-- Reps -->
+                        <input
+                            type="number"
+                            inputmode="numeric"
+                            :value="set.reps"
+                            :placeholder="lastSet(i)?.reps != null ? String(lastSet(i)!.reps) : '—'"
+                            @input="updateSet(i, { reps: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
+                            :disabled="set.completed"
+                            class="w-full bg-surface border border-border rounded-xl px-2 py-2.5 text-sm text-center outline-none focus:border-primary-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        />
+
+                        <!-- Weight -->
+                        <input
+                            type="number"
+                            inputmode="decimal"
+                            :value="set.weight"
+                            :placeholder="lastSet(i)?.weight != null ? String(lastSet(i)!.weight) : '—'"
+                            @input="updateSet(i, { weight: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
+                            :disabled="set.completed"
+                            class="w-full bg-surface border border-border rounded-xl px-2 py-2.5 text-sm text-center outline-none focus:border-primary-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        />
+
+                        <!-- Complete toggle -->
+                        <button
+                            @click="toggleSetComplete(i)"
+                            class="size-9 rounded-full border-2 flex items-center justify-center transition-all shrink-0"
+                            :class="set.completed
+                                ? 'bg-primary-500 border-primary-500 text-white shadow-sm'
+                                : 'border-border text-text-muted hover:border-primary-400 hover:text-primary-400 active:scale-95'"
+                        >
+                            <IconCheck class="size-4" />
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- ── Cardio ── -->
+                <div v-else class="space-y-3">
+                    <button
+                        @click="update({ completed: !modelValue.completed })"
+                        class="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 font-semibold text-sm transition-all active:scale-[0.98]"
+                        :class="modelValue.completed
+                            ? 'bg-primary-500/15 border-primary-500 text-primary-400'
+                            : 'bg-surface border-border text-text-muted hover:border-primary-400 hover:text-primary-400'"
+                    >
+                        <IconCheck class="size-4" />
+                        {{ modelValue.completed ? 'Erledigt' : 'Als erledigt markieren' }}
+                    </button>
+
+                    <div class="flex gap-2" :class="modelValue.completed ? 'opacity-50 pointer-events-none' : ''">
+                        <div class="relative flex-1">
+                            <input
+                                type="number"
+                                inputmode="decimal"
+                                :value="durationDisplay"
+                                @input="durationDisplay = ($event.target as HTMLInputElement).valueAsNumber || undefined"
+                                :placeholder="durationUnit === 'min' ? 'Min' : 'Sek'"
+                                class="w-full bg-surface border border-border rounded-xl px-2.5 py-2.5 pr-12 text-sm outline-none focus:border-primary-500 transition-colors"
+                            />
+                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-muted pointer-events-none">
+                                {{ durationUnit === 'min' ? 'min' : 's' }}
+                            </span>
+                        </div>
+                        <input
+                            v-if="exercise.metric !== 'none'"
+                            type="number"
+                            inputmode="decimal"
+                            :value="modelValue.metricValue"
+                            @input="update({ metricValue: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
+                            :placeholder="metricLabel"
+                            class="w-full bg-surface border border-border rounded-xl px-2.5 py-2.5 text-sm outline-none focus:border-primary-500 transition-colors"
+                        />
+                    </div>
+                </div>
+            </template>
         </div>
     </div>
 </template>

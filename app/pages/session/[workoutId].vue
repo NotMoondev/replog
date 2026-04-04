@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { WorkoutSessionExercise } from '~/types/session'
+import type { Exercise } from '~/types/workout'
 import { useWorkoutStore } from '~/stores/useWorkoutStore'
 import { useSessionStore } from '~/stores/useSessionStore'
 
@@ -15,6 +16,7 @@ interface LocalExercise {
     sets: LocalSet[]
     duration?: number
     metricValue?: number
+    skipped?: boolean
 }
 
 const route = useRoute()
@@ -26,14 +28,17 @@ const workoutId = computed(() => route.params.workoutId as string)
 const workout = computed(() => workoutStore.workouts.find(w => w.id === workoutId.value))
 
 const localData = ref<LocalExercise[]>([])
+const addedExercises = ref<Exercise[]>([])
 const lastSession = ref<Awaited<ReturnType<typeof sessionStore.getLastSessionForWorkout>>>(null)
 const saving = ref(false)
 const sessionStartTime = ref(0)
+const showExercisePicker = ref(false)
 
 const timer = useTimer()
 const totalCompletedSets = computed(() => {
     let count = 0
     for (const d of localData.value) {
+        if (d.skipped) continue
         if (d.sets.length > 0) {
             count += d.sets.filter(s => s.completed).length
         } else if (d.completed) {
@@ -124,81 +129,118 @@ function getLastExercise(exerciseId: string) {
     return lastSession.value?.exercises.find(e => e.exerciseId === exerciseId) ?? null
 }
 
+// All exercises in play (workout + added)
+const allExercises = computed(() => [...(workout.value?.exercises ?? []), ...addedExercises.value])
+
 const doneCount = computed(() => {
-    return localData.value.filter(d => {
-        const ex = workout.value?.exercises.find(e => e.id === d.exerciseId)
+    return localData.value.filter((d, i) => {
+        if (d.skipped) return false
+        const ex = allExercises.value[i]
         if (ex?.type === 'strength') return d.sets.some(s => s.completed)
         return d.completed
     }).length
 })
 
-const exerciseItems = computed(() =>
-    (workout.value?.exercises ?? []).map((ex, i) => ({
-        exercise: ex,
-        localItem: localData.value[i] as LocalExercise,
-        last: getLastExercise(ex.id),
-        index: i,
-    })).filter(item => item.localItem !== undefined)
-)
+const exerciseItems = computed(() => {
+    const workoutExs = workout.value?.exercises ?? []
+    const items: Array<{ exercise: Exercise; localItem: LocalExercise; last: WorkoutSessionExercise | null; index: number }> = []
+
+    for (let i = 0; i < workoutExs.length; i++) {
+        const ex = workoutExs[i]
+        const localItem = localData.value[i]
+        if (!ex || !localItem) continue
+        items.push({ exercise: ex, localItem, last: getLastExercise(ex.id), index: i })
+    }
+
+    for (let j = 0; j < addedExercises.value.length; j++) {
+        const ex = addedExercises.value[j]
+        const i = workoutExs.length + j
+        const localItem = localData.value[i]
+        if (!ex || !localItem) continue
+        items.push({ exercise: ex, localItem, last: null, index: i })
+    }
+
+    return items
+})
+
+function handleExerciseSelected(exercise: Exercise) {
+    addedExercises.value.push(exercise)
+    if (exercise.type === 'strength') {
+        localData.value.push({
+            exerciseId: exercise.id,
+            completed: false,
+            sets: exercise.sets.map(s => ({ reps: s.reps, weight: s.weight, completed: false })),
+        })
+    } else {
+        localData.value.push({
+            exerciseId: exercise.id,
+            completed: false,
+            sets: [],
+            duration: exercise.duration,
+            metricValue: exercise.metricValue,
+        })
+    }
+    showExercisePicker.value = false
+}
 
 async function finish() {
     saving.value = true
-    const exercises: WorkoutSessionExercise[] = localData.value
-        .filter(d => {
-            const ex = workout.value?.exercises.find(e => e.id === d.exerciseId)
-            if (ex?.type === 'strength') return d.sets.some(s => s.completed)
-            return d.completed
-        })
-        .map(d => {
-            const ex = workout.value?.exercises.find(e => e.id === d.exerciseId)
-            if (ex?.type === 'strength') {
-                return {
-                    exerciseId: d.exerciseId,
-                    sets: d.sets
-                        .filter(s => s.completed)
-                        .map(s => ({ reps: s.reps ?? 0, weight: s.weight })),
-                }
-            } else {
-                return {
-                    exerciseId: d.exerciseId,
-                    duration: d.duration,
-                    metricValue: d.metricValue,
-                }
-            }
-        })
+    const exercises: WorkoutSessionExercise[] = []
+
+    for (let i = 0; i < localData.value.length; i++) {
+        const d = localData.value[i]!
+        if (d.skipped) continue
+        const ex = allExercises.value[i]
+        if (!ex) continue
+
+        if (ex.type === 'strength') {
+            if (!d.sets.some(s => s.completed)) continue
+            exercises.push({
+                exerciseId: d.exerciseId,
+                exerciseName: ex.name,
+                sets: d.sets.filter(s => s.completed).map(s => ({ reps: s.reps ?? 0, weight: s.weight })),
+            })
+        } else {
+            if (!d.completed) continue
+            exercises.push({
+                exerciseId: d.exerciseId,
+                exerciseName: ex.name,
+                duration: d.duration,
+                metricValue: d.metricValue,
+            })
+        }
+    }
 
     const durationSeconds = Math.round((Date.now() - sessionStartTime.value) / 1000)
     leaveConfirmed.value = true
-    await sessionStore.completeSession(workoutId.value, exercises, durationSeconds)
+    await sessionStore.completeSession(workoutId.value, exercises, durationSeconds, workout.value?.name)
 
-    // Neue Werte in Workout speichern
+    // Back-propagate completed values into the workout template (only for original workout exercises)
     if (workout.value) {
-        for (const d of localData.value) {
-            const exIndex = workout.value.exercises.findIndex(e => e.id === d.exerciseId)
-            if (exIndex === -1) continue
-            const ex = workout.value.exercises[exIndex]
+        const workoutExs = workout.value.exercises
+        for (let i = 0; i < workoutExs.length; i++) {
+            const d = localData.value[i]
+            if (!d || d.skipped) continue
+            const ex = workoutExs[i]
             if (!ex) continue
+
             if (ex.type === 'strength') {
-                // Nur abgeschlossene Sätze übernehmen
                 const completedSets = d.sets.filter(s => s.completed)
                 if (completedSets.length === 0) continue
-                const updatedEx = {
+                await workoutStore.updateExercise(workoutId.value, i, {
                     ...ex,
                     sets: d.sets.map(s => ({
                         reps: s.reps ?? ex.sets[d.sets.indexOf(s)]?.reps ?? 0,
                         weight: s.weight,
                     })),
-                }
-                await workoutStore.updateExercise(workoutId.value, exIndex, updatedEx)
+                })
             } else {
-                // Cardio
                 if (!d.completed) continue
-                const updatedEx = {
+                await workoutStore.updateExercise(workoutId.value, i, {
                     ...ex,
                     duration: d.duration ?? ex.duration,
                     metricValue: d.metricValue ?? ex.metricValue,
-                }
-                await workoutStore.updateExercise(workoutId.value, exIndex, updatedEx)
+                })
             }
         }
     }
@@ -215,6 +257,21 @@ async function finish() {
         </div>
 
         <template v-else>
+            <!-- Top gradient shadow when timer is visible -->
+            <Transition
+                enter-active-class="transition-opacity duration-300"
+                enter-from-class="opacity-0"
+                enter-to-class="opacity-100"
+                leave-active-class="transition-opacity duration-200"
+                leave-from-class="opacity-100"
+                leave-to-class="opacity-0"
+            >
+                <div
+                    v-if="timer.isRunning.value"
+                    class="fixed inset-x-0 top-12 h-40 bg-gradient-to-b from-bg via-bg/40 to-transparent pointer-events-none z-[9]"
+                />
+            </Transition>
+
             <!-- Pause Timer Banner -->
             <Transition
                 enter-active-class="transition duration-300 ease-out"
@@ -224,24 +281,24 @@ async function finish() {
                 leave-from-class="opacity-100 translate-y-0"
                 leave-to-class="opacity-0 -translate-y-2"
             >
-                <div v-if="timer.isRunning.value" class="bg-primary-500/15 border border-primary-500/40 rounded-2xl p-3 flex items-center justify-between sticky top-4 z-10">
+                <div v-if="timer.isRunning.value" class="bg-card border border-primary-500/50 rounded-2xl px-4 py-3 flex items-center justify-between sticky top-4 z-10 shadow-md shadow-black/30">
                     <div class="flex items-center gap-3">
                         <IconTimer class="size-5 text-primary-400 shrink-0" />
                         <div>
-                            <div class="text-xs text-text-muted">Pause</div>
-                            <div class="text-2xl font-mono font-semibold text-primary-400">{{ timer.formattedRemaining.value }}</div>
+                            <div class="text-xs text-text-muted font-medium uppercase tracking-wide">Pause</div>
+                            <div class="text-2xl font-bold text-primary-400 leading-tight">{{ timer.formattedRemaining.value }}</div>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
                         <button
                             @click="timer.reset()"
-                            class="text-xs bg-surface hover:bg-surface-hover border border-border rounded-lg px-3 py-1.5 transition-colors font-medium"
+                            class="text-xs bg-surface hover:bg-surface-hover border border-border text-text rounded-lg px-3 py-1.5 transition-colors font-semibold"
                         >
                             Neu starten
                         </button>
                         <button
                             @click="timer.stop()"
-                            class="text-xs text-text-muted hover:text-text transition-colors px-2 py-1.5"
+                            class="text-text-muted hover:text-text transition-colors p-1.5"
                         >
                             <IconX class="size-4" />
                         </button>
@@ -270,6 +327,15 @@ async function finish() {
                 />
             </div>
 
+            <!-- Add exercise during session -->
+            <button
+                @click="showExercisePicker = true"
+                class="w-full flex items-center justify-center gap-2 border border-dashed border-border hover:border-primary-500/60 text-text-muted hover:text-primary-400 rounded-xl py-3 text-sm font-medium transition-colors"
+            >
+                <IconPlus class="size-4" />
+                Übung hinzufügen
+            </button>
+
             <button
                 @click="finish"
                 :disabled="saving || doneCount === 0"
@@ -279,6 +345,14 @@ async function finish() {
                 Session abschließen
             </button>
         </template>
+
+        <!-- Exercise picker (session mode) -->
+        <ExercisePickerModal
+            v-if="showExercisePicker"
+            :sessionMode="true"
+            @close="showExercisePicker = false"
+            @select="handleExerciseSelected"
+        />
 
         <!-- Leave warning dialog -->
         <Teleport to="body">
@@ -298,12 +372,12 @@ async function finish() {
                         enter-to-class="opacity-100 scale-100"
                     >
                         <div class="bg-card border border-border rounded-2xl p-6 space-y-4 max-w-sm w-full">
-                            <h3 class="font-semibold text-lg">Training verlassen?</h3>
+                            <h3 class="font-semibold text-lg text-text">Training verlassen?</h3>
                             <p class="text-sm text-text-muted">Nicht gespeicherte Fortschritte gehen verloren.</p>
                             <div class="flex gap-3">
                                 <button
                                     @click="showLeaveDialog = false"
-                                    class="flex-1 bg-surface hover:bg-surface-hover rounded-xl py-2.5 font-semibold text-sm transition-colors"
+                                    class="flex-1 bg-surface text-text hover:bg-surface-hover rounded-xl py-2.5 font-semibold text-sm transition-colors"
                                 >
                                     Weitertrainieren
                                 </button>
