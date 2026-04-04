@@ -8,6 +8,7 @@ interface ExportData {
     workouts: unknown[]
     trainingPlans: unknown[]
     sessions: unknown[]
+    exercises?: unknown[]
 }
 
 export async function exportAllData(): Promise<void> {
@@ -17,6 +18,7 @@ export async function exportAllData(): Promise<void> {
         workouts: await db.workouts.toArray(),
         trainingPlans: await db.trainingPlans.toArray(),
         sessions: await db.sessions.toArray(),
+        exercises: await db.exercises.toArray(),
     }
 
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
@@ -48,14 +50,16 @@ export async function importAllData(file: File): Promise<void> {
         throw new Error('Ungültiges Export-Format')
     }
 
-    await db.transaction('rw', [db.workouts, db.trainingPlans, db.sessions], async () => {
+    await db.transaction('rw', [db.workouts, db.trainingPlans, db.sessions, db.exercises], async () => {
         await db.workouts.clear()
         await db.trainingPlans.clear()
         await db.sessions.clear()
+        await db.exercises.clear()
 
         if (data.workouts.length) await db.workouts.bulkAdd(data.workouts as any[])
         if (data.trainingPlans.length) await db.trainingPlans.bulkAdd(data.trainingPlans as any[])
         if (data.sessions.length) await db.sessions.bulkAdd(data.sessions as any[])
+        if (data.exercises?.length) await db.exercises.bulkAdd(data.exercises as any[])
     })
 }
 
