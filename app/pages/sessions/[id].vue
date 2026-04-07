@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useSessionStore, computeVolume } from '~/stores/useSessionStore'
+import { useSessionStore, computeVolume, computeRepsVolume, computeCardioScore, computeCardioDuration } from '~/stores/useSessionStore'
 import { useWorkoutStore } from '~/stores/useWorkoutStore'
 import type { WorkoutSessionExercise } from '~/types/session'
 
@@ -40,23 +40,45 @@ const volumeDeltaPercent = computed(() => {
     return Math.round(((currentVolume.value - prevVolume.value) / prevVolume.value) * 100)
 })
 
+const currentRepsVolume = computed(() => session.value ? computeRepsVolume(session.value.exercises) : 0)
+const prevRepsVolume = computed(() => prevSession.value ? computeRepsVolume(prevSession.value.exercises) : 0)
+const repsVolumeDeltaPercent = computed(() => {
+    if (!prevSession.value || prevRepsVolume.value === 0) return null
+    return Math.round(((currentRepsVolume.value - prevRepsVolume.value) / prevRepsVolume.value) * 100)
+})
+
+const currentCardioScore = computed(() => session.value ? computeCardioScore(session.value.exercises) : 0)
+const prevCardioScore = computed(() => prevSession.value ? computeCardioScore(prevSession.value.exercises) : 0)
+const cardioScoreDeltaPercent = computed(() => {
+    if (!prevSession.value || prevCardioScore.value === 0) return null
+    return Math.round(((currentCardioScore.value - prevCardioScore.value) / prevCardioScore.value) * 100)
+})
+
+const currentCardioDuration = computed(() => session.value ? computeCardioDuration(session.value.exercises) : 0)
+const prevCardioDuration = computed(() => prevSession.value ? computeCardioDuration(prevSession.value.exercises) : 0)
+
+const hasWeightedExercises = computed(() => currentVolume.value > 0)
+const hasBodyweightExercises = computed(() => currentRepsVolume.value > 0)
+const hasCardioExercises = computed(() => currentCardioScore.value > 0)
+
 function exerciseName(ex: WorkoutSessionExercise): string {
     return workout.value?.exercises.find(e => e.id === ex.exerciseId)?.name
         ?? ex.exerciseName
         ?? ex.exerciseId
 }
 
-// PRs: highest weight (or reps for bodyweight) per exercise across ALL sessions for same workout
+// PR map: best weight/reps per exercise across ALL sessions (cross-workout)
 const prMap = computed(() => {
     if (!session.value) return new Map<string, number>()
     const map = new Map<string, number>()
     for (const s of sessionStore.allSessions) {
-        if (s.workoutId !== session.value.workoutId || s.id === session.value.id) continue
+        if (s.id === session.value.id) continue
         for (const ex of s.exercises) {
             if (!ex.sets) continue
+            if (ex.strengthMode === 'time') continue // no PR tracking for time-mode
             const usesWeight = ex.sets.some(set => (set.weight ?? 0) > 0)
             for (const set of ex.sets) {
-                const val = usesWeight ? (set.weight ?? 0) : set.reps
+                const val = usesWeight ? (set.weight ?? 0) : (set.reps ?? 0)
                 const prev = map.get(ex.exerciseId) ?? 0
                 if (val > prev) map.set(ex.exerciseId, val)
             }
@@ -65,16 +87,19 @@ const prMap = computed(() => {
     return map
 })
 
-// True if this exercise has no weight recorded (bodyweight)
+// True if this exercise has no weight recorded (bodyweight / reps-only)
 function isBodyweight(ex: WorkoutSessionExercise): boolean {
     if (!ex.sets || ex.sets.length === 0) return false
+    if (ex.strengthMode === 'time') return false
+    if (ex.strengthMode === 'reps') return true
     return ex.sets.every(s => (s.weight ?? 0) === 0)
 }
 
 function isNewPR(ex: WorkoutSessionExercise): boolean {
     if (!ex.sets || ex.sets.length === 0) return false
+    if (ex.strengthMode === 'time') return false
     const bodyweight = isBodyweight(ex)
-    const maxVal = Math.max(...ex.sets.map(s => bodyweight ? s.reps : (s.weight ?? 0)))
+    const maxVal = Math.max(...ex.sets.map(s => bodyweight ? (s.reps ?? 0) : (s.weight ?? 0)))
     if (maxVal === 0) return false
     const prev = prMap.value.get(ex.exerciseId) ?? 0
     return maxVal > prev
@@ -87,11 +112,20 @@ function setComparison(ex: WorkoutSessionExercise, setIndex: number): { label: s
     const curSet = ex.sets?.[setIndex]
     if (!lastSet || !curSet) return null
 
-    if (isBodyweight(ex)) {
-        // Compare reps
-        const diff = curSet.reps - lastSet.reps
+    if (ex.strengthMode === 'time') {
+        // Compare durations
+        const cur = curSet.duration ?? 0
+        const prev = lastSet.duration ?? 0
+        if (prev === 0) return null
         return {
-            label: `${lastSet.reps} Wdh`,
+            label: formatDuration(prev) ?? '—',
+            dir: cur > prev ? 'better' : cur < prev ? 'worse' : 'same',
+        }
+    } else if (isBodyweight(ex)) {
+        // Compare reps
+        const diff = (curSet.reps ?? 0) - (lastSet.reps ?? 0)
+        return {
+            label: `${lastSet.reps ?? 0} Reps`,
             dir: diff > 0 ? 'better' : diff < 0 ? 'worse' : 'same',
         }
     } else {
@@ -105,8 +139,15 @@ function setComparison(ex: WorkoutSessionExercise, setIndex: number): { label: s
     }
 }
 
+// Find the most recent occurrence of an exercise across ALL sessions (cross-workout)
 function getLastExercise(exerciseId: string): WorkoutSessionExercise | null {
-    return prevSession.value?.exercises.find(e => e.exerciseId === exerciseId) ?? null
+    if (!session.value) return null
+    const currentIndex = sessionStore.allSessions.findIndex(s => s.id === sessionId.value)
+    for (const s of sessionStore.allSessions.slice(currentIndex + 1)) {
+        const ex = s.exercises.find(e => e.exerciseId === exerciseId)
+        if (ex) return ex
+    }
+    return null
 }
 
 function formatDate(iso: string): string {
@@ -146,15 +187,15 @@ function formatDuration(seconds?: number): string | null {
                 </div>
             </div>
 
-            <!-- Volume comparison card -->
-            <div class="bg-card border border-border rounded-2xl p-4 space-y-3">
+            <!-- Weighted volume card -->
+            <div v-if="hasWeightedExercises" class="bg-card border border-border rounded-2xl p-4 space-y-3">
                 <h2 class="font-medium text-sm">Gesamtvolumen</h2>
                 <div class="flex items-end gap-4">
                     <div>
                         <div class="text-2xl font-semibold">{{ currentVolume.toLocaleString('de-DE') }} kg</div>
                         <div class="text-xs text-text-muted mt-0.5">Diese Session</div>
                     </div>
-                    <template v-if="prevSession">
+                    <template v-if="prevSession && prevVolume > 0">
                         <div class="text-text-muted mb-1">vs.</div>
                         <div>
                             <div class="text-lg font-medium text-text-muted">{{ prevVolume.toLocaleString('de-DE') }} kg</div>
@@ -172,6 +213,62 @@ function formatDuration(seconds?: number): string | null {
                     <div v-else class="text-xs text-text-muted self-center">Erste Session für dieses Workout</div>
                 </div>
             </div>
+
+            <!-- Bodyweight reps card -->
+            <div v-if="hasBodyweightExercises" class="bg-card border border-border rounded-2xl p-4 space-y-3">
+                <h2 class="font-medium text-sm">Körpergewicht-Übungen</h2>
+                <div class="flex items-end gap-4">
+                    <div>
+                        <div class="text-2xl font-semibold">{{ currentRepsVolume.toLocaleString('de-DE') }}</div>
+                        <div class="text-xs text-text-muted mt-0.5">Reps diese Session</div>
+                    </div>
+                    <template v-if="prevSession && prevRepsVolume > 0">
+                        <div class="text-text-muted mb-1">vs.</div>
+                        <div>
+                            <div class="text-lg font-medium text-text-muted">{{ prevRepsVolume.toLocaleString('de-DE') }}</div>
+                            <div class="text-xs text-text-muted mt-0.5">Letzte Session</div>
+                        </div>
+                        <div v-if="repsVolumeDeltaPercent !== null" class="ml-auto">
+                            <span
+                                class="text-lg font-semibold"
+                                :class="repsVolumeDeltaPercent >= 0 ? 'text-green-400' : 'text-red-400'"
+                            >
+                                {{ repsVolumeDeltaPercent >= 0 ? '+' : '' }}{{ repsVolumeDeltaPercent }}%
+                            </span>
+                        </div>
+                    </template>
+                    <div v-else class="text-xs text-text-muted self-center">Erste Session für dieses Workout</div>
+                </div>
+            </div>
+
+            <!-- Cardio card -->
+            <div v-if="hasCardioExercises" class="bg-card border border-border rounded-2xl p-4 space-y-3">
+                <h2 class="font-medium text-sm">Cardio</h2>
+                <div class="flex items-end gap-4">
+                    <div>
+                        <div class="text-2xl font-semibold">{{ formatDuration(currentCardioDuration) }}</div>
+                        <div class="text-xs text-text-muted mt-0.5">Diese Session</div>
+                    </div>
+                    <template v-if="prevSession && prevCardioDuration > 0">
+                        <div class="text-text-muted mb-1">vs.</div>
+                        <div>
+                            <div class="text-lg font-medium text-text-muted">{{ formatDuration(prevCardioDuration) }}</div>
+                            <div class="text-xs text-text-muted mt-0.5">Letzte Session</div>
+                        </div>
+                        <div v-if="cardioScoreDeltaPercent !== null" class="ml-auto">
+                            <span
+                                class="text-lg font-semibold"
+                                :class="cardioScoreDeltaPercent >= 0 ? 'text-green-400' : 'text-red-400'"
+                            >
+                                {{ cardioScoreDeltaPercent >= 0 ? '+' : '' }}{{ cardioScoreDeltaPercent }}%
+                            </span>
+                        </div>
+                    </template>
+                    <div v-else class="text-xs text-text-muted self-center">Erste Session für dieses Workout</div>
+                </div>
+            </div>
+
+            <hr class="border-border mx-2 shrink-0" />
 
             <!-- Exercises -->
             <div class="space-y-3">
@@ -191,31 +288,88 @@ function formatDuration(seconds?: number): string | null {
                     <!-- Strength sets -->
                     <template v-if="ex.sets && ex.sets.length > 0">
                         <div class="space-y-1">
-                            <div class="grid grid-cols-4 text-xs text-text-muted mb-2 px-1">
+                            <!-- time-mode header -->
+                            <div v-if="ex.strengthMode === 'time'" class="grid grid-cols-3 text-xs text-text-muted mb-2 px-1">
                                 <span>Satz</span>
-                                <span class="text-center">Wdh</span>
+                                <span class="text-center">Dauer</span>
+                                <span class="text-center text-primary-400">vs. letzte</span>
+                            </div>
+                            <!-- reps-only header -->
+                            <div v-else-if="ex.strengthMode === 'reps'" class="grid grid-cols-3 text-xs text-text-muted mb-2 px-1">
+                                <span>Satz</span>
+                                <span class="text-center">Reps</span>
+                                <span class="text-center text-primary-400">vs. letzte</span>
+                            </div>
+                            <!-- reps+weight header -->
+                            <div v-else class="grid grid-cols-4 text-xs text-text-muted mb-2 px-1">
+                                <span>Satz</span>
+                                <span class="text-center">Reps</span>
                                 <span class="text-center">{{ isBodyweight(ex) ? '—' : 'Gewicht' }}</span>
                                 <span class="text-center text-primary-400">vs. letzte</span>
                             </div>
-                            <div
-                                v-for="(set, i) in ex.sets"
-                                :key="i"
-                                class="grid grid-cols-4 text-sm py-1.5 px-1 rounded-lg even:bg-surface/40"
-                            >
-                                <span class="text-text-muted">{{ i + 1 }}</span>
-                                <span class="text-center font-medium">{{ set.reps }}</span>
-                                <span class="text-center font-medium">
-                                    {{ set.weight != null && set.weight > 0 ? `${set.weight} kg` : '—' }}
-                                </span>
-                                <span class="text-center text-xs">
-                                    <template v-if="setComparison(ex, i)">
-                                        <span :class="setComparison(ex, i)!.dir === 'better' ? 'text-green-400' : setComparison(ex, i)!.dir === 'worse' ? 'text-red-400' : 'text-text-muted'">
-                                            {{ setComparison(ex, i)!.label }}
-                                        </span>
-                                    </template>
-                                    <span v-else class="text-text-muted">—</span>
-                                </span>
-                            </div>
+
+                            <!-- time-mode rows -->
+                            <template v-if="ex.strengthMode === 'time'">
+                                <div
+                                    v-for="(set, i) in ex.sets"
+                                    :key="i"
+                                    class="grid grid-cols-3 text-sm py-1.5 px-1 rounded-lg even:bg-surface/40"
+                                >
+                                    <span class="text-text-muted">{{ i + 1 }}</span>
+                                    <span class="text-center font-medium">{{ formatDuration(set.duration) ?? '—' }}</span>
+                                    <span class="text-center text-xs">
+                                        <template v-if="setComparison(ex, i)">
+                                            <span :class="setComparison(ex, i)!.dir === 'better' ? 'text-green-400' : setComparison(ex, i)!.dir === 'worse' ? 'text-red-400' : 'text-text-muted'">
+                                                {{ setComparison(ex, i)!.label }}
+                                            </span>
+                                        </template>
+                                        <span v-else class="text-text-muted">—</span>
+                                    </span>
+                                </div>
+                            </template>
+
+                            <!-- reps-only rows -->
+                            <template v-else-if="ex.strengthMode === 'reps'">
+                                <div
+                                    v-for="(set, i) in ex.sets"
+                                    :key="i"
+                                    class="grid grid-cols-3 text-sm py-1.5 px-1 rounded-lg even:bg-surface/40"
+                                >
+                                    <span class="text-text-muted">{{ i + 1 }}</span>
+                                    <span class="text-center font-medium">{{ set.reps ?? '—' }}</span>
+                                    <span class="text-center text-xs">
+                                        <template v-if="setComparison(ex, i)">
+                                            <span :class="setComparison(ex, i)!.dir === 'better' ? 'text-green-400' : setComparison(ex, i)!.dir === 'worse' ? 'text-red-400' : 'text-text-muted'">
+                                                {{ setComparison(ex, i)!.label }}
+                                            </span>
+                                        </template>
+                                        <span v-else class="text-text-muted">—</span>
+                                    </span>
+                                </div>
+                            </template>
+
+                            <!-- reps+weight rows (default) -->
+                            <template v-else>
+                                <div
+                                    v-for="(set, i) in ex.sets"
+                                    :key="i"
+                                    class="grid grid-cols-4 text-sm py-1.5 px-1 rounded-lg even:bg-surface/40"
+                                >
+                                    <span class="text-text-muted">{{ i + 1 }}</span>
+                                    <span class="text-center font-medium">{{ set.reps ?? '—' }}</span>
+                                    <span class="text-center font-medium">
+                                        {{ set.weight != null && set.weight > 0 ? `${set.weight} kg` : '—' }}
+                                    </span>
+                                    <span class="text-center text-xs">
+                                        <template v-if="setComparison(ex, i)">
+                                            <span :class="setComparison(ex, i)!.dir === 'better' ? 'text-green-400' : setComparison(ex, i)!.dir === 'worse' ? 'text-red-400' : 'text-text-muted'">
+                                                {{ setComparison(ex, i)!.label }}
+                                            </span>
+                                        </template>
+                                        <span v-else class="text-text-muted">—</span>
+                                    </span>
+                                </div>
+                            </template>
                         </div>
                     </template>
 

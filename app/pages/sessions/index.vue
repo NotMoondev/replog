@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useSessionStore, computeVolume } from '~/stores/useSessionStore'
+import { useSessionStore, computeVolume, computeRepsVolume, computeCardioScore } from '~/stores/useSessionStore'
 import { useWorkoutStore } from '~/stores/useWorkoutStore'
 
 const sessionStore = useSessionStore()
@@ -30,24 +30,40 @@ function formatDuration(seconds?: number): string | null {
     return s > 0 ? `${m} min ${s}s` : `${m} min`
 }
 
-function volumeDelta(sessionIndex: number): { value: number; percent: number } | null {
+function volumeDelta(sessionIndex: number): { value: number; percent: number; label: string } | null {
     const session = sessionStore.allSessions[sessionIndex]
     if (!session) return null
-    const currentVol = computeVolume(session.exercises)
-    if (currentVol === 0) return null
 
-    // find previous session for same workout (allSessions sorted desc, so look further in array)
     const prevSession = sessionStore.allSessions
         .slice(sessionIndex + 1)
         .find(s => s.workoutId === session.workoutId)
     if (!prevSession) return null
 
+    // 1. Weighted volume (priority)
+    const currentVol = computeVolume(session.exercises)
     const prevVol = computeVolume(prevSession.exercises)
-    if (prevVol === 0) return null
+    if (currentVol > 0 && prevVol > 0) {
+        const diff = currentVol - prevVol
+        return { value: diff, percent: Math.round((diff / prevVol) * 100), label: 'Volumen' }
+    }
 
-    const diff = currentVol - prevVol
-    const percent = Math.round((diff / prevVol) * 100)
-    return { value: diff, percent }
+    // 2. Cardio score
+    const currentCardio = computeCardioScore(session.exercises)
+    const prevCardio = computeCardioScore(prevSession.exercises)
+    if (currentCardio > 0 && prevCardio > 0) {
+        const diff = currentCardio - prevCardio
+        return { value: diff, percent: Math.round((diff / prevCardio) * 100), label: 'Cardio' }
+    }
+
+    // 3. Bodyweight reps
+    const currentReps = computeRepsVolume(session.exercises)
+    const prevReps = computeRepsVolume(prevSession.exercises)
+    if (currentReps > 0 && prevReps > 0) {
+        const diff = currentReps - prevReps
+        return { value: diff, percent: Math.round((diff / prevReps) * 100), label: 'Reps' }
+    }
+
+    return null
 }
 </script>
 
@@ -86,7 +102,7 @@ function volumeDelta(sessionIndex: number): { value: number; percent: number } |
                             >
                                 {{ volumeDelta(i)!.percent >= 0 ? '+' : '' }}{{ volumeDelta(i)!.percent }}%
                             </span>
-                            <div class="text-xs text-text-muted">Volumen</div>
+                            <div class="text-xs text-text-muted">{{ volumeDelta(i)!.label }}</div>
                         </template>
                         <template v-else>
                             <span class="text-sm text-text-muted">—</span>

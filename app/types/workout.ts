@@ -2,16 +2,20 @@ export type Exercise =
     | StrengthExercise
     | CardioExercise
 
+export type StrengthMode = 'reps+weight' | 'reps' | 'time'
+
 export interface StrengthExercise {
     id: string
     type: 'strength'
     name: string
+    mode?: StrengthMode // defaults to 'reps+weight' when absent
     sets: StrengthSet[]
 }
 
 export interface StrengthSet {
-    reps: number
+    reps?: number
     weight?: number
+    duration?: number // seconds, used when mode === 'time'
 }
 
 export interface CardioExercise {

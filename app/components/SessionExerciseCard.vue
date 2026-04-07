@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import type { Exercise } from '~/types/workout'
+import type { Exercise, StrengthExercise } from '~/types/workout'
 import type { WorkoutSessionExercise } from '~/types/session'
 
 interface LocalSet {
     reps?: number
     weight?: number
+    duration?: number // seconds, for strength time-mode
     completed: boolean
 }
 
@@ -48,6 +49,11 @@ function lastSet(index: number) {
     return props.lastExercise?.sets?.[index]
 }
 
+const strengthMode = computed(() => {
+    if (props.exercise.type !== 'strength') return null
+    return (props.exercise as StrengthExercise).mode ?? 'reps+weight'
+})
+
 const metricLabel = computed(() => {
     if (props.exercise.type !== 'cardio') return ''
     if (props.exercise.metric === 'intensity') return 'Intensität'
@@ -60,6 +66,26 @@ const durationUnit = computed((): 's' | 'min' => {
     const d = (props.exercise as any).duration ?? 0
     return d >= 60 && d % 60 === 0 ? 'min' : 's'
 })
+
+// For time-mode sets: auto-detect unit from first template set
+const timeDurationUnit = computed((): 's' | 'min' => {
+    if (props.exercise.type !== 'strength') return 's'
+    const firstDur = (props.exercise as StrengthExercise).sets[0]?.duration ?? 0
+    return firstDur >= 60 && firstDur % 60 === 0 ? 'min' : 's'
+})
+
+function getSetDurationDisplay(i: number): number | undefined {
+    const v = props.modelValue.sets[i]?.duration
+    if (v == null) return undefined
+    return timeDurationUnit.value === 'min' ? Math.round(v / 60 * 100) / 100 : v
+}
+
+function setSetDuration(i: number, val: number | undefined) {
+    const secs = val == null || isNaN(val as number)
+        ? undefined
+        : timeDurationUnit.value === 'min' ? Math.round((val as number) * 60) : (val as number)
+    updateSet(i, { duration: secs })
+}
 
 const durationDisplay = computed({
     get(): number | undefined {
@@ -222,47 +248,99 @@ const swipeProgress = computed(() => Math.min(Math.abs(dragX.value) / SWIPE_THRE
             <template v-else>
                 <!-- ── Strength ── -->
                 <div v-if="exercise.type === 'strength'" class="space-y-1.5">
+
                     <!-- Column headers -->
-                    <div class="grid gap-2 px-1 mb-1" style="grid-template-columns: 1.75rem 1fr 1fr 2.25rem">
-                        <span></span>
-                        <span class="text-xs text-text-muted text-center">Wdh</span>
-                        <span class="text-xs text-text-muted text-center">kg</span>
-                        <span></span>
-                    </div>
+                    <template v-if="strengthMode === 'reps+weight'">
+                        <div class="grid gap-2 px-1 mb-1" style="grid-template-columns: 1.75rem 1fr 1fr 2.25rem">
+                            <span></span>
+                            <span class="text-xs text-text-muted text-center">Reps</span>
+                            <span class="text-xs text-text-muted text-center">kg</span>
+                            <span></span>
+                        </div>
+                    </template>
+                    <template v-else-if="strengthMode === 'reps'">
+                        <div class="grid gap-2 px-1 mb-1" style="grid-template-columns: 1.75rem 1fr 2.25rem">
+                            <span></span>
+                            <span class="text-xs text-text-muted text-center">Reps</span>
+                            <span></span>
+                        </div>
+                    </template>
+                    <template v-else-if="strengthMode === 'time'">
+                        <div class="grid gap-2 px-1 mb-1" style="grid-template-columns: 1.75rem 1fr 2.25rem">
+                            <span></span>
+                            <span class="text-xs text-text-muted text-center">Zeit ({{ timeDurationUnit === 'min' ? 'min' : 's' }})</span>
+                            <span></span>
+                        </div>
+                    </template>
 
                     <div
                         v-for="(set, i) in modelValue.sets"
                         :key="i"
                         class="grid items-center gap-2 rounded-xl px-1 py-0.5 transition-all"
                         :class="set.completed ? 'opacity-45' : ''"
-                        style="grid-template-columns: 1.75rem 1fr 1fr 2.25rem"
+                        :style="strengthMode === 'reps+weight'
+                            ? 'grid-template-columns: 1.75rem 1fr 1fr 2.25rem'
+                            : 'grid-template-columns: 1.75rem 1fr 2.25rem'"
                     >
                         <!-- Set number -->
                         <span class="text-xs font-bold text-text-muted text-center tabular-nums">
                             {{ i + 1 }}
                         </span>
 
-                        <!-- Reps -->
-                        <input
-                            type="number"
-                            inputmode="numeric"
-                            :value="set.reps"
-                            :placeholder="lastSet(i)?.reps != null ? String(lastSet(i)!.reps) : '—'"
-                            @input="updateSet(i, { reps: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
-                            :disabled="set.completed"
-                            class="w-full bg-surface border border-border rounded-xl px-2 py-2.5 text-sm text-center outline-none focus:border-primary-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        />
+                        <!-- reps+weight: Reps + Weight -->
+                        <template v-if="strengthMode === 'reps+weight'">
+                            <input
+                                type="number"
+                                inputmode="numeric"
+                                :value="set.reps"
+                                :placeholder="lastSet(i)?.reps != null ? String(lastSet(i)!.reps) : '—'"
+                                @input="updateSet(i, { reps: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
+                                :disabled="set.completed"
+                                class="w-full bg-surface border border-border rounded-xl px-2 py-2.5 text-sm text-center outline-none focus:border-primary-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            />
+                            <input
+                                type="number"
+                                inputmode="decimal"
+                                :value="set.weight"
+                                :placeholder="lastSet(i)?.weight != null ? String(lastSet(i)!.weight) : '—'"
+                                @input="updateSet(i, { weight: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
+                                :disabled="set.completed"
+                                class="w-full bg-surface border border-border rounded-xl px-2 py-2.5 text-sm text-center outline-none focus:border-primary-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            />
+                        </template>
 
-                        <!-- Weight -->
-                        <input
-                            type="number"
-                            inputmode="decimal"
-                            :value="set.weight"
-                            :placeholder="lastSet(i)?.weight != null ? String(lastSet(i)!.weight) : '—'"
-                            @input="updateSet(i, { weight: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
-                            :disabled="set.completed"
-                            class="w-full bg-surface border border-border rounded-xl px-2 py-2.5 text-sm text-center outline-none focus:border-primary-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        />
+                        <!-- reps only -->
+                        <template v-else-if="strengthMode === 'reps'">
+                            <input
+                                type="number"
+                                inputmode="numeric"
+                                :value="set.reps"
+                                :placeholder="lastSet(i)?.reps != null ? String(lastSet(i)!.reps) : '—'"
+                                @input="updateSet(i, { reps: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
+                                :disabled="set.completed"
+                                class="w-full bg-surface border border-border rounded-xl px-2 py-2.5 text-sm text-center outline-none focus:border-primary-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            />
+                        </template>
+
+                        <!-- time per set -->
+                        <template v-else-if="strengthMode === 'time'">
+                            <div class="relative">
+                                <input
+                                    type="number"
+                                    inputmode="decimal"
+                                    :value="getSetDurationDisplay(i)"
+                                    @input="setSetDuration(i, ($event.target as HTMLInputElement).valueAsNumber || undefined)"
+                                    :placeholder="lastSet(i)?.duration != null
+                                        ? String(timeDurationUnit === 'min' ? Math.round(lastSet(i)!.duration! / 60 * 100) / 100 : lastSet(i)!.duration)
+                                        : '—'"
+                                    :disabled="set.completed"
+                                    class="w-full bg-surface border border-border rounded-xl px-2 py-2.5 pr-10 text-sm text-center outline-none focus:border-primary-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                />
+                                <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-text-muted pointer-events-none">
+                                    {{ timeDurationUnit === 'min' ? 'min' : 's' }}
+                                </span>
+                            </div>
+                        </template>
 
                         <!-- Complete toggle -->
                         <button
@@ -299,21 +377,26 @@ const swipeProgress = computed(() => Math.min(Math.abs(dragX.value) / SWIPE_THRE
                                 :value="durationDisplay"
                                 @input="durationDisplay = ($event.target as HTMLInputElement).valueAsNumber || undefined"
                                 :placeholder="durationUnit === 'min' ? 'Min' : 'Sek'"
-                                class="w-full bg-surface border border-border rounded-xl px-2.5 py-2.5 pr-12 text-sm outline-none focus:border-primary-500 transition-colors"
+                                class="w-full bg-surface border border-border rounded-xl px-2.5 py-2.5 pr-10 text-sm outline-none focus:border-primary-500 transition-colors"
                             />
                             <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-muted pointer-events-none">
                                 {{ durationUnit === 'min' ? 'min' : 's' }}
                             </span>
                         </div>
-                        <input
-                            v-if="exercise.metric !== 'none'"
-                            type="number"
-                            inputmode="decimal"
-                            :value="modelValue.metricValue"
-                            @input="update({ metricValue: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
-                            :placeholder="metricLabel"
-                            class="w-full bg-surface border border-border rounded-xl px-2.5 py-2.5 text-sm outline-none focus:border-primary-500 transition-colors"
-                        />
+                        <div class="relative flex-1">
+                            <input
+                                v-if="exercise.metric !== 'none'"
+                                type="number"
+                                inputmode="decimal"
+                                :value="modelValue.metricValue"
+                                @input="update({ metricValue: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
+                                :placeholder="metricLabel"
+                                class="w-full bg-surface border border-border rounded-xl px-2.5 py-2.5 pr-12 text-sm outline-none focus:border-primary-500 transition-colors"
+                            />
+                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-muted pointer-events-none">
+                                {{ exercise.metric === 'speed' ? 'km/h' : 'Stufe' }}
+                            </span>
+                        </div>
                     </div>
                 </div>
             </template>

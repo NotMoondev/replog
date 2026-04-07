@@ -52,10 +52,17 @@ function formatDuration(secs: number): string {
             <div v-for="(set, i) in exercise.sets" :key="i"
                 class="flex items-center gap-1.5 bg-surface rounded-lg px-3 py-1.5 text-sm">
                 <span class="text-text-muted text-xs bg-surface-hover rounded-lg px-2 py-1">{{ Number(i) + 1 }}</span>
-                <span class="font-medium">{{ set.reps }}<span class="text-text-muted font-normal"> reps</span></span>
-                <template v-if="set.weight">
-                    <span class="text-text-muted">•</span>
-                    <span class="font-medium text-primary-400">{{ set.weight }}<span class="text-text-muted font-normal"> kg</span></span>
+                <!-- time mode -->
+                <template v-if="exercise.mode === 'time'">
+                    <span class="font-medium">{{ set.duration != null ? formatDuration(set.duration) : '—' }}</span>
+                </template>
+                <!-- reps or reps+weight -->
+                <template v-else>
+                    <span class="font-medium">{{ set.reps ?? '—' }}<span class="text-text-muted font-normal"> reps</span></span>
+                    <template v-if="exercise.mode !== 'reps' && set.weight">
+                        <span class="text-text-muted">•</span>
+                        <span class="font-medium text-primary-400">{{ set.weight }}<span class="text-text-muted font-normal"> kg</span></span>
+                    </template>
                 </template>
             </div>
         </div>

@@ -118,7 +118,7 @@ function onCreateModalClose() {
                             </div>
                             <p v-if="ex.type === 'strength'" class="text-xs text-text-muted mt-0.5">
                                 {{ ex.sets.length }} Sets
-                                <template v-if="ex.sets[0]?.reps"> · {{ ex.sets[0].reps }} Wdh</template>
+                                <template v-if="ex.sets[0]?.reps"> · {{ ex.sets[0].reps }} Reps</template>
                                 <template v-if="ex.sets[0]?.weight"> · {{ ex.sets[0].weight }} kg</template>
                             </p>
                             <p v-else class="text-xs text-text-muted mt-0.5">

@@ -71,29 +71,6 @@ const sessionsThisWeek = computed(() => {
     return sessionStore.allSessions.filter(s => new Date(s.date).getTime() >= start).length
 })
 
-const streak = computed(() => {
-    if (sessionStore.allSessions.length === 0) return 0
-    // Build a set of unique training days (YYYY-MM-DD)
-    const days = new Set(
-        sessionStore.allSessions.map(s => s.date.slice(0, 10))
-    )
-    let count = 0
-    const d = new Date()
-    d.setHours(0, 0, 0, 0)
-    // If no session today, start checking from yesterday
-    const todayStr = d.toISOString().slice(0, 10)
-    if (!days.has(todayStr)) {
-        d.setDate(d.getDate() - 1)
-    }
-    while (true) {
-        const key = d.toISOString().slice(0, 10)
-        if (!days.has(key)) break
-        count++
-        d.setDate(d.getDate() - 1)
-    }
-    return count
-})
-
 const totalVolume = computed(() =>
     sessionStore.allSessions.reduce((sum, s) => sum + computeVolume(s.exercises), 0)
 )
@@ -159,7 +136,7 @@ onMounted(async () => {
         </div>
 
         <!-- Stats row -->
-        <div class="grid grid-cols-3 gap-3">
+        <div class="grid grid-cols-2 gap-3">
             <div class="bg-card border border-border rounded-2xl p-3 text-center">
                 <div class="text-2xl font-bold">{{ store.workouts.length }}</div>
                 <div class="text-xs text-text-muted mt-0.5">Workouts</div>
@@ -167,13 +144,6 @@ onMounted(async () => {
             <div class="bg-card border border-border rounded-2xl p-3 text-center">
                 <div class="text-2xl font-bold">{{ sessionStore.allSessions.length }}</div>
                 <div class="text-xs text-text-muted mt-0.5">Sessions</div>
-            </div>
-            <div class="bg-card border border-border rounded-2xl p-3 text-center">
-                <div class="text-2xl font-bold flex items-center justify-center gap-1">
-                    {{ streak }}
-                    <IconFlame v-if="streak >= 3" class="size-5 text-orange-400" />
-                </div>
-                <div class="text-xs text-text-muted mt-0.5">Tage Streak</div>
             </div>
         </div>
 

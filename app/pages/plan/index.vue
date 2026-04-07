@@ -43,26 +43,16 @@ async function handleImport(event: Event) {
             <h1 class="text-2xl font-semibold">Trainingspläne</h1>
             <div class="flex items-center gap-2">
                 <!-- Import -->
-                <input
-                    ref="importInput"
-                    type="file"
-                    accept=".json,application/json"
-                    class="hidden"
-                    @change="handleImport"
-                />
-                <button
-                    @click="importInput?.click()"
-                    :disabled="importing"
+                <input ref="importInput" type="file" accept=".json,application/json" class="hidden"
+                    @change="handleImport" />
+                <button @click="importInput?.click()" :disabled="importing"
                     class="bg-surface border border-border hover:border-primary-500 text-text rounded-xl px-3 py-2 text-sm transition-colors flex items-center gap-1.5 shrink-0 disabled:opacity-50"
-                    title="Plan importieren"
-                >
+                    title="Plan importieren">
                     <IconLoaderCircle v-if="importing" class="size-4 animate-spin" />
                     <IconDownload v-else class="size-4" />
                 </button>
-                <button
-                    @click="showCreateDrawer = true"
-                    class="bg-primary-500 hover:bg-primary-600 text-white rounded-xl px-4 py-2 font-semibold text-sm transition-colors flex items-center gap-1.5 shrink-0"
-                >
+                <button @click="showCreateDrawer = true"
+                    class="bg-primary-500 hover:bg-primary-600 text-white rounded-xl px-4 py-2 font-semibold text-sm transition-colors flex items-center gap-1.5 shrink-0">
                     <IconPlus class="size-4" /> Erstellen
                 </button>
             </div>
@@ -75,71 +65,48 @@ async function handleImport(event: Event) {
 
         <!-- List -->
         <div v-else class="space-y-3">
-            <div
-                v-for="plan in store.plans"
-                :key="plan.id"
+            <NuxtLink v-for="plan in store.plans" :key="plan.id" :to="`/plan/${plan.id}`"
                 class="bg-card border rounded-2xl p-4 flex justify-between items-center"
-                :class="plan.isActive ? 'border-primary-500/60' : 'border-border hover:border-surface-hover'"
-            >
+                :class="plan.isActive ? 'border-primary-500/60' : 'border-border hover:border-surface-hover'">
                 <div>
                     <div class="font-semibold text-sm flex items-center gap-2">
                         {{ plan.name }}
-                        <span v-if="plan.isActive"
-                            class="text-xs bg-primary-500 text-white px-2 py-0.5 rounded-full">
+                        <span v-if="plan.isActive" class="text-xs bg-primary-500 text-white px-2 py-0.5 rounded-full">
                             Aktiv
                         </span>
                     </div>
                     <div class="text-xs text-text-muted">
-                        {{ plan.days.filter(d => !d.isRestDay).length }} Trainingstage
+                        {{plan.days.filter(d => !d.isRestDay).length}} Trainingstage
                     </div>
                 </div>
 
-                <div class="flex items-center gap-3">
-                    <button
-                        v-if="!plan.isActive"
-                        @click="store.setActivePlan(plan.id)"
-                        class="text-sm text-primary-400 hover:text-primary-500"
-                    >
+                <div class="flex items-center gap-3" @click.prevent.stop>
+                    <button v-if="!plan.isActive" @click="store.setActivePlan(plan.id)"
+                        class="text-sm text-primary-400 hover:text-primary-500">
                         Aktivieren
                     </button>
 
                     <!-- Delete with inline confirm -->
                     <template v-if="confirmingDeleteId === plan.id">
-                        <button
-                            @click="store.deletePlan(plan.id); confirmingDeleteId = null"
-                            class="text-red-400 hover:text-red-300 text-sm font-medium transition"
-                        >
+                        <button @click="store.deletePlan(plan.id); confirmingDeleteId = null"
+                            class="text-red-400 hover:text-red-300 text-sm font-medium transition">
                             Löschen
                         </button>
                         <button @click="confirmingDeleteId = null" class="text-text-muted hover:text-text transition">
                             <IconX class="size-4" />
                         </button>
                     </template>
-                    <button
-                        v-else
-                        @click="confirmingDeleteId = plan.id"
-                        class="text-text-muted hover:text-red-400 transition-colors"
-                    >
+                    <button v-else @click="confirmingDeleteId = plan.id"
+                        class="text-text-muted hover:text-red-400 transition-colors">
                         <IconTrash2 class="size-4" />
                     </button>
 
-                    <button
-                        @click="store.exportPlan(plan.id)"
-                        class="text-text-muted hover:text-primary-400 transition-colors"
-                        title="Plan exportieren"
-                    >
+                    <button @click="store.exportPlan(plan.id)"
+                        class="text-text-muted hover:text-primary-400 transition-colors" title="Plan exportieren">
                         <IconShare2 class="size-4" />
                     </button>
-
-                    <NuxtLink
-                        :to="`/plan/${plan.id}`"
-                        class="text-sm text-text-muted hover:text-primary-400 flex items-center gap-1"
-                    >
-                        <IconPen class="size-4" />
-                    </NuxtLink>
-
                 </div>
-            </div>
+            </NuxtLink>
 
             <!-- Empty state -->
             <div v-if="store.plans.length === 0" class="text-center py-16 space-y-2">
@@ -153,20 +120,11 @@ async function handleImport(event: Event) {
     <!-- Create Drawer -->
     <BottomDrawer :open="showCreateDrawer" @close="showCreateDrawer = false; newPlanName = ''">
         <h2 class="font-semibold text-lg">Neuer Trainingsplan</h2>
-        <input
-            v-model="newPlanName"
-            placeholder="Name des Plans"
-            @keyup.enter="create"
-            autofocus
-            class="w-full bg-surface border border-border rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-500 transition-colors"
-        />
-        <button
-            @click="create"
-            :disabled="!newPlanName.trim()"
-            class="w-full bg-primary-500 hover:bg-primary-600 disabled:opacity-40 text-white rounded-xl py-3 font-semibold text-sm transition-colors"
-        >
+        <input v-model="newPlanName" placeholder="Name des Plans" @keyup.enter="create" autofocus
+            class="w-full bg-surface border border-border rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-500 transition-colors" />
+        <button @click="create" :disabled="!newPlanName.trim()"
+            class="w-full bg-primary-500 hover:bg-primary-600 disabled:opacity-40 text-white rounded-xl py-3 font-semibold text-sm transition-colors">
             Erstellen
         </button>
     </BottomDrawer>
 </template>
-

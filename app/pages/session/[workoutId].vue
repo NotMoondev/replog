@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import type { WorkoutSessionExercise } from '~/types/session'
-import type { Exercise } from '~/types/workout'
+import type { Exercise, StrengthExercise } from '~/types/workout'
 import { useWorkoutStore } from '~/stores/useWorkoutStore'
 import { useSessionStore } from '~/stores/useSessionStore'
 
 interface LocalSet {
     reps?: number
     weight?: number
+    duration?: number
     completed: boolean
 }
 
@@ -67,7 +68,6 @@ onBeforeRouteLeave((to) => {
 function handleBeforeUnload(e: BeforeUnloadEvent) {
     if (doneCount.value > 0) {
         e.preventDefault()
-        e.returnValue = ''
     }
 }
 
@@ -102,12 +102,14 @@ function initLocalData() {
     localData.value = workout.value.exercises.map(ex => {
         const lastEx = lastSession.value?.exercises.find(e => e.exerciseId === ex.id)
         if (ex.type === 'strength') {
+            const mode = (ex as StrengthExercise).mode ?? 'reps+weight'
             return {
                 exerciseId: ex.id,
                 completed: false,
                 sets: ex.sets.map((set, i) => ({
-                    reps: lastEx?.sets?.[i]?.reps ?? set.reps ?? undefined,
-                    weight: lastEx?.sets?.[i]?.weight ?? set.weight ?? undefined,
+                    reps: mode !== 'time' ? (lastEx?.sets?.[i]?.reps ?? set.reps ?? undefined) : undefined,
+                    weight: mode === 'reps+weight' ? (lastEx?.sets?.[i]?.weight ?? set.weight ?? undefined) : undefined,
+                    duration: mode === 'time' ? (lastEx?.sets?.[i]?.duration ?? set.duration ?? undefined) : undefined,
                     completed: false,
                 })),
                 duration: undefined,
@@ -166,10 +168,16 @@ const exerciseItems = computed(() => {
 function handleExerciseSelected(exercise: Exercise) {
     addedExercises.value.push(exercise)
     if (exercise.type === 'strength') {
+        const mode = (exercise as StrengthExercise).mode ?? 'reps+weight'
         localData.value.push({
             exerciseId: exercise.id,
             completed: false,
-            sets: exercise.sets.map(s => ({ reps: s.reps, weight: s.weight, completed: false })),
+            sets: exercise.sets.map(s => ({
+                reps: mode !== 'time' ? s.reps : undefined,
+                weight: mode === 'reps+weight' ? s.weight : undefined,
+                duration: mode === 'time' ? s.duration : undefined,
+                completed: false,
+            })),
         })
     } else {
         localData.value.push({
@@ -195,10 +203,16 @@ async function finish() {
 
         if (ex.type === 'strength') {
             if (!d.sets.some(s => s.completed)) continue
+            const strengthMode = (ex as StrengthExercise).mode ?? 'reps+weight'
             exercises.push({
                 exerciseId: d.exerciseId,
                 exerciseName: ex.name,
-                sets: d.sets.filter(s => s.completed).map(s => ({ reps: s.reps ?? 0, weight: s.weight })),
+                strengthMode,
+                sets: d.sets.filter(s => s.completed).map(s => ({
+                    reps: strengthMode !== 'time' ? (s.reps ?? 0) : undefined,
+                    weight: strengthMode === 'reps+weight' ? s.weight : undefined,
+                    duration: strengthMode === 'time' ? s.duration : undefined,
+                })),
             })
         } else {
             if (!d.completed) continue
@@ -227,11 +241,13 @@ async function finish() {
             if (ex.type === 'strength') {
                 const completedSets = d.sets.filter(s => s.completed)
                 if (completedSets.length === 0) continue
+                const strengthMode = (ex as StrengthExercise).mode ?? 'reps+weight'
                 await workoutStore.updateExercise(workoutId.value, i, {
                     ...ex,
-                    sets: d.sets.map(s => ({
-                        reps: s.reps ?? ex.sets[d.sets.indexOf(s)]?.reps ?? 0,
-                        weight: s.weight,
+                    sets: d.sets.map((s, si) => ({
+                        reps: strengthMode !== 'time' ? (s.reps ?? ex.sets[si]?.reps ?? 0) : undefined,
+                        weight: strengthMode === 'reps+weight' ? s.weight : undefined,
+                        duration: strengthMode === 'time' ? (s.duration ?? ex.sets[si]?.duration) : undefined,
                     })),
                 })
             } else {

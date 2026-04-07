@@ -1,10 +1,14 @@
+import type { StrengthMode } from '~/types/workout'
+
 export interface WorkoutSessionExercise {
     exerciseId: string
     exerciseName?: string
+    strengthMode?: StrengthMode
 
     sets?: {
-        reps: number
+        reps?: number
         weight?: number
+        duration?: number // seconds, used for strength time-mode
     }[]
 
     duration?: number

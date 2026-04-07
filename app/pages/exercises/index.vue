@@ -35,10 +35,8 @@ async function handleDelete(id: string) {
         <!-- Header -->
         <div class="flex justify-between items-center">
             <h1 class="text-2xl font-semibold">Übungen</h1>
-            <button
-                @click="showCreateModal = true"
-                class="bg-primary-500 hover:bg-primary-600 text-white rounded-xl px-4 py-2 font-semibold text-sm transition-colors flex items-center gap-1.5 shrink-0"
-            >
+            <button @click="showCreateModal = true"
+                class="bg-primary-500 hover:bg-primary-600 text-white rounded-xl px-4 py-2 font-semibold text-sm transition-colors flex items-center gap-1.5 shrink-0">
                 <IconPlus class="size-4" /> Erstellen
             </button>
         </div>
@@ -46,12 +44,10 @@ async function handleDelete(id: string) {
         <!-- Search -->
         <div class="flex items-center gap-2 bg-surface border border-border rounded-xl px-3 py-2.5">
             <IconSearch class="size-4 text-text-muted shrink-0" />
-            <input
-                v-model="searchQuery"
-                placeholder="Suchen…"
-                class="flex-1 bg-transparent text-sm outline-none placeholder:text-text-muted"
-            />
-            <button v-if="searchQuery" @click="searchQuery = ''" class="text-text-muted hover:text-text transition-colors">
+            <input v-model="searchQuery" placeholder="Suchen…"
+                class="flex-1 bg-transparent text-sm outline-none placeholder:text-text-muted" />
+            <button v-if="searchQuery" @click="searchQuery = ''"
+                class="text-text-muted hover:text-text transition-colors">
                 <IconX class="size-4" />
             </button>
         </div>
@@ -64,7 +60,7 @@ async function handleDelete(id: string) {
         <!-- Exercise List -->
         <div v-else class="space-y-3">
             <div v-for="ex in filteredExercises" :key="ex.id"
-                class="bg-card border border-border rounded-2xl p-4">
+                class="bg-card border border-border rounded-2xl p-4 cursor-pointer" @click="editingExercise = ex">
                 <div class="flex justify-between items-start gap-2">
                     <div class="min-w-0 flex-1">
                         <div class="flex items-center gap-2 mb-2">
@@ -79,10 +75,20 @@ async function handleDelete(id: string) {
                             <div v-for="(set, i) in ex.sets" :key="i"
                                 class="flex items-center gap-1.5 bg-surface rounded-lg px-2.5 py-1 text-xs">
                                 <span class="text-text-muted">{{ i + 1 }}</span>
-                                <span class="font-medium">{{ set.reps }}<span class="text-text-muted font-normal"> reps</span></span>
-                                <template v-if="set.weight">
-                                    <span class="text-text-muted">·</span>
-                                    <span class="text-primary-400">{{ set.weight }}<span class="text-text-muted font-normal"> kg</span></span>
+                                <!-- time mode -->
+                                <template v-if="ex.mode === 'time'">
+                                    <span class="font-medium">{{ set.duration != null ? formatDuration(set.duration) :
+                                        '—' }}</span>
+                                </template>
+                                <!-- reps or reps+weight -->
+                                <template v-else>
+                                    <span class="font-medium">{{ set.reps ?? '—' }}<span
+                                            class="text-text-muted font-normal"> reps</span></span>
+                                    <template v-if="ex.mode !== 'reps' && set.weight">
+                                        <span class="text-text-muted">·</span>
+                                        <span class="text-primary-400">{{ set.weight }}<span
+                                                class="text-text-muted font-normal"> kg</span></span>
+                                    </template>
                                 </template>
                             </div>
                         </div>
@@ -100,26 +106,19 @@ async function handleDelete(id: string) {
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-2 shrink-0">
-                        <button @click="editingExercise = ex" class="text-text-muted hover:text-primary-400 transition-colors">
-                            <IconPencil class="size-4" />
-                        </button>
+                    <div class="flex items-center gap-2 shrink-0" @click.stop>
                         <template v-if="confirmingDeleteId === ex.id">
-                            <button
-                                @click="handleDelete(ex.id)"
-                                class="text-red-400 hover:text-red-300 text-sm font-medium transition px-1"
-                            >
+                            <button @click="handleDelete(ex.id)"
+                                class="text-red-400 hover:text-red-300 text-sm font-medium transition px-1">
                                 Löschen
                             </button>
-                            <button @click="confirmingDeleteId = null" class="text-text-muted hover:text-text transition">
+                            <button @click="confirmingDeleteId = null"
+                                class="text-text-muted hover:text-text transition">
                                 <IconX class="size-3.5" />
                             </button>
                         </template>
-                        <button
-                            v-else
-                            @click="confirmingDeleteId = ex.id"
-                            class="text-text-muted hover:text-red-400 transition-colors"
-                        >
+                        <button v-else @click="confirmingDeleteId = ex.id"
+                            class="text-text-muted hover:text-red-400 transition-colors">
                             <IconTrash2 class="size-4" />
                         </button>
                     </div>
@@ -142,10 +141,6 @@ async function handleDelete(id: string) {
         <ExerciseModal v-if="showCreateModal" @close="showCreateModal = false" />
 
         <!-- Edit Modal -->
-        <ExerciseModal
-            v-if="editingExercise"
-            @close="editingExercise = null"
-            :initialExercise="editingExercise"
-        />
+        <ExerciseModal v-if="editingExercise" @close="editingExercise = null" :initialExercise="editingExercise" />
     </div>
 </template>

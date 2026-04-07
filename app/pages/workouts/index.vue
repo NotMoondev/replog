@@ -76,9 +76,14 @@ function lastSessionLabel(workoutId: string): string | null {
 
                 <!-- Start button positioned over card -->
                 <NuxtLink
-                    :to="`/session/${w.id}`"
-                    class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-sm bg-primary-500 hover:bg-primary-600 text-white rounded-lg px-3 py-1.5 font-semibold transition-colors shrink-0"
-                    @click.stop
+                    :to="w.exercises.length > 0 ? `/session/${w.id}` : ''"
+                    :class="[
+                        'absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-sm rounded-lg px-3 py-1.5 font-semibold transition-colors shrink-0',
+                        w.exercises.length > 0
+                            ? 'bg-primary-500 hover:bg-primary-600 text-white cursor-pointer'
+                            : 'bg-primary-500/40 text-white/60 cursor-not-allowed'
+                    ]"
+                    @click.stop="$event.preventDefault()"
                 >
                     <IconPlay class="size-3.5" />
                     Starten
