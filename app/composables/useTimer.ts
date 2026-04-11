@@ -1,7 +1,11 @@
 export function useTimer() {
     const isRunning = ref(false)
     const remaining = ref(0)
+
     let interval: ReturnType<typeof setInterval> | null = null
+
+    // absolute time
+    let endTime: number | null = null
 
     function clearTimer() {
         if (interval !== null) {
@@ -10,24 +14,39 @@ export function useTimer() {
         }
     }
 
+    function updateRemaining() {
+        if (!endTime) return
+
+        const now = Date.now()
+        const diff = Math.max(0, endTime - now)
+
+        remaining.value = Math.ceil(diff / 1000)
+
+        if (diff <= 0) {
+            isRunning.value = false
+            clearTimer()
+        }
+    }
+
     function startCountdown(seconds: number) {
         clearTimer()
-        remaining.value = seconds
+
+        const now = Date.now()
+        endTime = now + seconds * 1000
+
         isRunning.value = true
+
+        updateRemaining()
+
         interval = setInterval(() => {
-            if (remaining.value <= 1) {
-                remaining.value = 0
-                isRunning.value = false
-                clearTimer()
-                return
-            }
-            remaining.value--
-        }, 1000)
+            updateRemaining()
+        }, 250)
     }
 
     function start() {
         const enabled = localStorage.getItem('timerEnabled')
         if (enabled === 'false') return
+
         const duration = parseInt(localStorage.getItem('timerDuration') ?? '90', 10)
         startCountdown(duration)
     }
@@ -41,6 +60,7 @@ export function useTimer() {
         clearTimer()
         isRunning.value = false
         remaining.value = 0
+        endTime = null
     }
 
     const formattedRemaining = computed(() => {
