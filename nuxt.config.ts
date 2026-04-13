@@ -11,6 +11,9 @@ export default defineNuxtConfig({
     app: {
         baseURL,
         head: {
+            meta: [ 
+                { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' }, 
+            ],
             link: [
                 { rel: 'icon', type: 'image/x-icon', href: `${baseURL}favicon.ico` },
                 { rel: 'shortcut icon', type: 'image/x-icon', href: `${baseURL}favicon.ico` },
