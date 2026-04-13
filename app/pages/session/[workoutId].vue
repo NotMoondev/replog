@@ -35,6 +35,41 @@ const saving = ref(false)
 const sessionStartTime = ref(0)
 const showExercisePicker = ref(false)
 
+// Draft persistence
+const draftKey = computed(() => `replog-session-draft-${workoutId.value}`)
+
+function saveDraft() {
+    if (localData.value.length === 0) return
+    try {
+        localStorage.setItem(draftKey.value, JSON.stringify({
+            localData: localData.value,
+            addedExercises: addedExercises.value,
+            sessionStartTime: sessionStartTime.value,
+        }))
+    } catch { /* quota exceeded – silently ignore */ }
+}
+
+function clearDraft() {
+    localStorage.removeItem(draftKey.value)
+}
+
+function restoreDraft(): boolean {
+    try {
+        const raw = localStorage.getItem(draftKey.value)
+        if (!raw) return false
+        const draft = JSON.parse(raw)
+        localData.value = draft.localData
+        addedExercises.value = draft.addedExercises ?? []
+        sessionStartTime.value = draft.sessionStartTime ?? Date.now()
+        return true
+    } catch {
+        return false
+    }
+}
+
+watch(localData, saveDraft, { deep: true })
+watch(addedExercises, saveDraft, { deep: true })
+
 const timer = useTimer()
 const totalCompletedSets = computed(() => {
     let count = 0
@@ -74,6 +109,7 @@ function handleBeforeUnload(e: BeforeUnloadEvent) {
 function confirmLeave() {
     leaveConfirmed.value = true
     showLeaveDialog.value = false
+    clearDraft()
     if (pendingRoute) {
         router.push(pendingRoute)
     } else {
@@ -87,6 +123,9 @@ onMounted(async () => {
     await workoutStore.loadWorkouts()
     lastSession.value = await sessionStore.getLastSessionForWorkout(workoutId.value)
     initLocalData()
+    if (restoreDraft()) {
+        useToast().addToast('Vorheriges Training wiederhergestellt')
+    }
 })
 
 onUnmounted(() => {
@@ -262,6 +301,7 @@ async function finish() {
     }
 
     saving.value = false
+    clearDraft()
     router.back()
 }
 </script>
@@ -283,7 +323,7 @@ async function finish() {
                 leave-to-class="opacity-0"
             >
                 <div
-                    v-if="timer.isRunning.value"
+                    v-if="timer.isRunning.value || timer.hasEnded.value"
                     class="fixed inset-x-0 top-12 h-40 bg-gradient-to-b from-bg via-bg/40 to-transparent pointer-events-none z-[9]"
                 />
             </Transition>
@@ -297,12 +337,16 @@ async function finish() {
                 leave-from-class="opacity-100 translate-y-0"
                 leave-to-class="opacity-0 -translate-y-2"
             >
-                <div v-if="timer.isRunning.value" class="bg-card border border-primary-500/50 rounded-2xl px-4 py-3 flex items-center justify-between sticky top-4 z-10 shadow-md shadow-black/30">
+                <div v-if="timer.isRunning.value || timer.hasEnded.value" :class="['bg-card rounded-2xl px-4 py-3 flex items-center justify-between sticky top-4 z-10 shadow-md shadow-black/30 border', timer.hasEnded.value ? 'border-orange-500/50' : 'border-primary-500/50']">
                     <div class="flex items-center gap-3">
-                        <IconTimer class="size-5 text-primary-400 shrink-0" />
+                        <IconTimer :class="['size-5 shrink-0', timer.hasEnded.value ? 'text-orange-400' : 'text-primary-400']" />
                         <div>
-                            <div class="text-xs text-text-muted font-medium uppercase tracking-wide">Pause</div>
-                            <div class="text-2xl font-bold text-primary-400 leading-tight">{{ timer.formattedRemaining.value }}</div>
+                            <div class="text-xs text-text-muted font-medium uppercase tracking-wide">
+                                {{ timer.hasEnded.value ? 'Pause vorbei' : 'Pause' }}
+                            </div>
+                            <div :class="['text-2xl font-bold leading-tight', timer.hasEnded.value ? 'text-orange-400' : 'text-primary-400']">
+                                {{ timer.hasEnded.value ? timer.formattedElapsed.value : timer.formattedRemaining.value }}
+                            </div>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">

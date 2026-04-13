@@ -1,6 +1,8 @@
 export function useTimer() {
     const isRunning = ref(false)
+    const hasEnded = ref(false)
     const remaining = ref(0)
+    const elapsed = ref(0)
 
     let interval: ReturnType<typeof setInterval> | null = null
 
@@ -18,18 +20,25 @@ export function useTimer() {
         if (!endTime) return
 
         const now = Date.now()
-        const diff = Math.max(0, endTime - now)
+        const diff = endTime - now
 
-        remaining.value = Math.ceil(diff / 1000)
-
-        if (diff <= 0) {
-            isRunning.value = false
-            clearTimer()
+        if (diff > 0) {
+            remaining.value = Math.ceil(diff / 1000)
+        } else {
+            remaining.value = 0
+            if (isRunning.value) {
+                isRunning.value = false
+                hasEnded.value = true
+            }
+            elapsed.value = Math.floor(-diff / 1000)
         }
     }
 
     function startCountdown(seconds: number) {
         clearTimer()
+
+        hasEnded.value = false
+        elapsed.value = 0
 
         const now = Date.now()
         endTime = now + seconds * 1000
@@ -59,7 +68,9 @@ export function useTimer() {
     function stop() {
         clearTimer()
         isRunning.value = false
+        hasEnded.value = false
         remaining.value = 0
+        elapsed.value = 0
         endTime = null
     }
 
@@ -69,9 +80,15 @@ export function useTimer() {
         return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
     })
 
+    const formattedElapsed = computed(() => {
+        const m = Math.floor(elapsed.value / 60)
+        const s = elapsed.value % 60
+        return `+${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+    })
+
     onUnmounted(() => {
         clearTimer()
     })
 
-    return { isRunning, remaining, formattedRemaining, start, reset, stop }
+    return { isRunning, hasEnded, remaining, elapsed, formattedRemaining, formattedElapsed, start, reset, stop }
 }
