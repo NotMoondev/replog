@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { useRouter, useRoute } from 'vue-router'
+import { useActiveSession } from '~/composables/useActiveSession'
 
 const router = useRouter()
 const route = useRoute()
+const activeSession = useActiveSession()
 
 const routeTitle = computed(() => {
     if (route.path.startsWith('/exercises')) return 'Übungen'
@@ -12,6 +14,14 @@ const routeTitle = computed(() => {
     if (route.path.startsWith('/session')) return 'Training'
     if (route.path.startsWith('/settings')) return 'Einstellungen'
     return 'Start'
+})
+
+const isSession = computed(() => route.path.startsWith('/session'))
+
+// Extra padding when resume banner is visible (banner ~44px + gap 8px)
+const mainPaddingClass = computed(() => {
+    if (isSession.value) return 'pb-4'
+    return activeSession.isActive.value ? 'pb-40' : 'pb-24'
 })
 
 function goBack() {
@@ -45,7 +55,7 @@ function goBack() {
         </header>
 
         <!-- Page Content -->
-        <main class="flex-1 overflow-y-auto pb-20">
+        <main class="flex-1 overflow-y-auto" :class="mainPaddingClass">
             <slot />
         </main>
     </div>

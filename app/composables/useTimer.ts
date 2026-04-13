@@ -74,6 +74,26 @@ export function useTimer() {
         endTime = null
     }
 
+    /** Restore a running/elapsed timer from a previously saved absolute end timestamp. */
+    function resumeFromEndTime(savedEndTime: number) {
+        clearTimer()
+        endTime = savedEndTime
+        hasEnded.value = false
+        elapsed.value = 0
+        // Determine initial state without starting the interval yet
+        updateRemaining()
+        // Only keep the interval running if still counting down or already past (show elapsed)
+        isRunning.value = endTime > Date.now()
+        if (!isRunning.value) hasEnded.value = true
+        interval = setInterval(() => {
+            updateRemaining()
+        }, 250)
+    }
+
+    function getEndTime(): number | null {
+        return endTime
+    }
+
     const formattedRemaining = computed(() => {
         const m = Math.floor(remaining.value / 60)
         const s = remaining.value % 60
@@ -90,5 +110,5 @@ export function useTimer() {
         clearTimer()
     })
 
-    return { isRunning, hasEnded, remaining, elapsed, formattedRemaining, formattedElapsed, start, reset, stop }
+    return { isRunning, hasEnded, remaining, elapsed, formattedRemaining, formattedElapsed, start, reset, stop, resumeFromEndTime, getEndTime }
 }

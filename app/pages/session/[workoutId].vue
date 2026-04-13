@@ -3,6 +3,7 @@ import type { WorkoutSessionExercise } from '~/types/session'
 import type { Exercise, StrengthExercise } from '~/types/workout'
 import { useWorkoutStore } from '~/stores/useWorkoutStore'
 import { useSessionStore } from '~/stores/useSessionStore'
+import { useActiveSession } from '~/composables/useActiveSession'
 
 interface LocalSet {
     reps?: number
@@ -24,6 +25,7 @@ const route = useRoute()
 const router = useRouter()
 const workoutStore = useWorkoutStore()
 const sessionStore = useSessionStore()
+const activeSession = useActiveSession()
 
 const workoutId = computed(() => route.params.workoutId as string)
 const workout = computed(() => workoutStore.workouts.find(w => w.id === workoutId.value))
@@ -35,16 +37,22 @@ const saving = ref(false)
 const sessionStartTime = ref(0)
 const showExercisePicker = ref(false)
 
+const timer = useTimer()
+
 // Draft persistence
 const draftKey = computed(() => `replog-session-draft-${workoutId.value}`)
 
 function saveDraft() {
     if (localData.value.length === 0) return
     try {
+        const elapsedSeconds = sessionStartTime.value > 0
+            ? Math.round((Date.now() - sessionStartTime.value) / 1000)
+            : 0
         localStorage.setItem(draftKey.value, JSON.stringify({
             localData: localData.value,
             addedExercises: addedExercises.value,
-            sessionStartTime: sessionStartTime.value,
+            elapsedSeconds,
+            timerEndTime: timer.isRunning.value ? timer.getEndTime() : null,
         }))
     } catch { /* quota exceeded – silently ignore */ }
 }
@@ -53,24 +61,32 @@ function clearDraft() {
     localStorage.removeItem(draftKey.value)
 }
 
+let isRestoring = false
+
 function restoreDraft(): boolean {
     try {
         const raw = localStorage.getItem(draftKey.value)
         if (!raw) return false
         const draft = JSON.parse(raw)
+        isRestoring = true
+        const elapsedMs = (draft.elapsedSeconds ?? 0) * 1000
+        sessionStartTime.value = Date.now() - elapsedMs
         localData.value = draft.localData
         addedExercises.value = draft.addedExercises ?? []
-        sessionStartTime.value = draft.sessionStartTime ?? Date.now()
+        if (typeof draft.timerEndTime === 'number') {
+            timer.resumeFromEndTime(draft.timerEndTime)
+        }
         return true
     } catch {
+        isRestoring = false
         return false
     }
 }
 
 watch(localData, saveDraft, { deep: true })
 watch(addedExercises, saveDraft, { deep: true })
+watch([timer.isRunning, timer.hasEnded], saveDraft)
 
-const timer = useTimer()
 const totalCompletedSets = computed(() => {
     let count = 0
     for (const d of localData.value) {
@@ -83,57 +99,38 @@ const totalCompletedSets = computed(() => {
     }
     return count
 })
+
 watch(totalCompletedSets, (newVal, oldVal) => {
-    if (newVal > oldVal) timer.start()
+    if (!isRestoring && newVal > oldVal) timer.start()
 })
 
-// Leave guard
-const showLeaveDialog = ref(false)
-const leaveConfirmed = ref(false)
-let pendingRoute: string | null = null
+// Abandon dialog
+const showAbandonDialog = ref(false)
 
-onBeforeRouteLeave((to) => {
-    if (!leaveConfirmed.value && doneCount.value > 0) {
-        showLeaveDialog.value = true
-        pendingRoute = to.fullPath
-        return false
-    }
-})
-
-function handleBeforeUnload(e: BeforeUnloadEvent) {
-    if (doneCount.value > 0) {
-        e.preventDefault()
-    }
-}
-
-function confirmLeave() {
-    leaveConfirmed.value = true
-    showLeaveDialog.value = false
-    clearDraft()
-    if (pendingRoute) {
-        router.push(pendingRoute)
-    } else {
-        router.back()
-    }
+function confirmAbandon() {
+    showAbandonDialog.value = false
+    activeSession.clear()
+    router.back()
 }
 
 onMounted(async () => {
-    sessionStartTime.value = Date.now()
-    window.addEventListener('beforeunload', handleBeforeUnload)
     await workoutStore.loadWorkouts()
     lastSession.value = await sessionStore.getLastSessionForWorkout(workoutId.value)
-    initLocalData()
     if (restoreDraft()) {
-        useToast().addToast('Vorheriges Training wiederhergestellt')
+        await nextTick()
+        isRestoring = false
+        if (doneCount.value > 0) {
+            useToast().addToast('Training fortgesetzt')
+        }
+    } else {
+        sessionStartTime.value = Date.now()
+        initLocalData()
     }
-})
-
-onUnmounted(() => {
-    window.removeEventListener('beforeunload', handleBeforeUnload)
+    activeSession.set(workoutId.value, workout.value?.name ?? '')
 })
 
 watch(workout, () => {
-    if (workout.value && localData.value.length === 0) initLocalData()
+    if (workout.value && localData.value.length === 0 && !localStorage.getItem(draftKey.value)) initLocalData()
 })
 
 function initLocalData() {
@@ -265,7 +262,6 @@ async function finish() {
     }
 
     const durationSeconds = Math.round((Date.now() - sessionStartTime.value) / 1000)
-    leaveConfirmed.value = true
     await sessionStore.completeSession(workoutId.value, exercises, durationSeconds, workout.value?.name)
 
     // Back-propagate completed values into the workout template (only for original workout exercises)
@@ -302,6 +298,7 @@ async function finish() {
 
     saving.value = false
     clearDraft()
+    activeSession.clear()
     router.back()
 }
 </script>
@@ -324,7 +321,7 @@ async function finish() {
             >
                 <div
                     v-if="timer.isRunning.value || timer.hasEnded.value"
-                    class="fixed inset-x-0 top-12 h-40 bg-gradient-to-b from-bg via-bg/40 to-transparent pointer-events-none z-[9]"
+                    class="fixed inset-x-0 top-12 h-40 bg-linear-to-b from-bg via-bg/40 to-transparent pointer-events-none z-9"
                 />
             </Transition>
 
@@ -404,6 +401,13 @@ async function finish() {
                 <IconLoaderCircle v-if="saving" class="size-4 animate-spin" />
                 Session abschließen
             </button>
+
+            <button
+                @click="showAbandonDialog = true"
+                class="w-full text-red-400 hover:text-red-300 text-sm font-medium py-2 transition-colors"
+            >
+                Training abbrechen
+            </button>
         </template>
 
         <!-- Exercise picker (session mode) -->
@@ -414,7 +418,7 @@ async function finish() {
             @select="handleExerciseSelected"
         />
 
-        <!-- Leave warning dialog -->
+        <!-- Abandon dialog -->
         <Teleport to="body">
             <Transition
                 enter-active-class="transition duration-200 ease-out"
@@ -424,7 +428,7 @@ async function finish() {
                 leave-from-class="opacity-100"
                 leave-to-class="opacity-0"
             >
-                <div v-if="showLeaveDialog" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                <div v-if="showAbandonDialog" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
                     <Transition
                         appear
                         enter-active-class="transition duration-200 ease-out"
@@ -432,20 +436,20 @@ async function finish() {
                         enter-to-class="opacity-100 scale-100"
                     >
                         <div class="bg-card border border-border rounded-2xl p-6 space-y-4 max-w-sm w-full">
-                            <h3 class="font-semibold text-lg text-text">Training verlassen?</h3>
-                            <p class="text-sm text-text-muted">Nicht gespeicherte Fortschritte gehen verloren.</p>
+                            <h3 class="font-semibold text-lg text-text">Training abbrechen?</h3>
+                            <p class="text-sm text-text-muted">Der Fortschritt dieser Session wird verworfen und kann nicht wiederhergestellt werden.</p>
                             <div class="flex gap-3">
                                 <button
-                                    @click="showLeaveDialog = false"
+                                    @click="showAbandonDialog = false"
                                     class="flex-1 bg-surface text-text hover:bg-surface-hover rounded-xl py-2.5 font-semibold text-sm transition-colors"
                                 >
                                     Weitertrainieren
                                 </button>
                                 <button
-                                    @click="confirmLeave"
+                                    @click="confirmAbandon"
                                     class="flex-1 bg-red-600 hover:bg-red-700 text-white rounded-xl py-2.5 font-semibold text-sm transition-colors"
                                 >
-                                    Verlassen
+                                    Abbrechen
                                 </button>
                             </div>
                         </div>

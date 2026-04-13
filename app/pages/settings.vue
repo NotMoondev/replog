@@ -5,6 +5,7 @@ const { addToast } = useToast()
 const { theme, setTheme } = useTheme()
 const importing = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
+const { public: { appVersion } } = useRuntimeConfig()
 
 // Timer settings
 const timerEnabled = ref(localStorage.getItem('timerEnabled') !== 'false')
@@ -159,6 +160,11 @@ async function handleImport(event: Event) {
                 <IconAlertTriangle class="size-3.5 text-text-muted shrink-0 mt-0.5" />
                 <p class="text-xs text-text-muted">Beim Importieren werden alle vorhandenen Daten unwiderruflich überschrieben. Mache vorher einen Export als Backup.</p>
             </div>
+        </div>
+
+        <!-- Version -->
+        <div class="text-center text-xs text-text-muted pb-2">
+            Version {{ appVersion }}
         </div>
     </div>
 </template>

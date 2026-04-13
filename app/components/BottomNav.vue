@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { useActiveSession } from '~/composables/useActiveSession'
 const route = useRoute()
+const router = useRouter()
+const activeSession = useActiveSession()
 
 const isHome = computed(() => route.path === '/')
 const isWorkouts = computed(() => route.path.startsWith('/workouts'))
@@ -14,7 +17,29 @@ const isSession = computed(() => route.path.startsWith('/session/') || route.pat
     <div v-if="!isSession" class="fixed bottom-0 inset-x-0 h-28 z-30 pointer-events-none"
         style="background: linear-gradient(to top, rgba(var(--color-bg-rgb), 0.85) 0%, rgba(var(--color-bg-rgb), 0) 100%);" />
 
-    <nav v-if="!isSession" class="fixed bottom-4 inset-x-4 z-40">
+    <div v-if="!isSession" class="fixed bottom-4 inset-x-4 z-40 flex flex-col gap-2">
+        <!-- Active session resume banner -->
+        <Transition
+            enter-active-class="transition duration-300 ease-out"
+            enter-from-class="opacity-0 translate-y-2"
+            enter-to-class="opacity-100 translate-y-0"
+            leave-active-class="transition duration-200 ease-in"
+            leave-from-class="opacity-100 translate-y-0"
+            leave-to-class="opacity-0 translate-y-2"
+        >
+            <button
+                v-if="activeSession.isActive.value"
+                @click="router.push(`/session/${activeSession.meta.value?.workoutId}`)"
+                class="w-full bg-primary-500 hover:bg-primary-600 text-white rounded-xl py-2.5 px-4 font-semibold text-sm flex items-center gap-2 shadow-lg transition-colors"
+            >
+                <IconPlay class="size-4 shrink-0" />
+                <span class="flex-1 text-left truncate">{{ activeSession.meta.value?.workoutName }} fortsetzen</span>
+                <span class="text-xs bg-white/20 rounded-md px-1.5 py-0.5 shrink-0">aktiv</span>
+            </button>
+        </Transition>
+
+        <!-- Bottom nav card -->
+        <nav>
         <div class="flex bg-card border border-border rounded-2xl overflow-hidden shadow-[0_4px_24px_rgba(var(--color-bg-rgb),0.8)]">
             <NuxtLink
                 to="/"
@@ -61,5 +86,6 @@ const isSession = computed(() => route.path.startsWith('/session/') || route.pat
                 <span class="text-[10px] font-medium">Statistiken</span>
             </NuxtLink>
         </div>
-    </nav>
+        </nav>
+    </div>
 </template>

@@ -3,10 +3,13 @@ import { ref, computed, onMounted } from 'vue'
 import { useWorkoutStore } from '~/stores/useWorkoutStore'
 import { useTrainingPlanStore } from '~/stores/useTrainingPlanStore'
 import { useSessionStore, computeVolume } from '~/stores/useSessionStore'
+import { useActiveSession } from '~/composables/useActiveSession'
 
 const store = useWorkoutStore()
 const planStore = useTrainingPlanStore()
 const sessionStore = useSessionStore()
+const activeSession = useActiveSession()
+const { showConflict, navigateTo, confirmDiscard, confirmResume, cancel: cancelConflict } = activeSession.useConflictGuard()
 
 const WEEKDAYS_SHORT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 
@@ -166,12 +169,12 @@ onMounted(async () => {
                     <div class="font-semibold">{{ todayWorkout.name }}</div>
                     <div class="text-xs text-text-muted">{{ todayWorkout.exercises.length }} Übungen</div>
                 </div>
-                <NuxtLink
-                    :to="`/session/${todayWorkout.id}`"
+                <button
+                    @click="navigateTo(todayWorkout.id, todayWorkout.name)"
                     class="block w-full bg-primary-500 hover:bg-primary-600 text-white text-center rounded-xl py-2.5 font-semibold text-sm transition-colors"
                 >
                     Training starten
-                </NuxtLink>
+                </button>
             </div>
 
             <div v-else class="text-sm text-text-muted">
@@ -287,5 +290,40 @@ onMounted(async () => {
             </NuxtLink>
         </div>
     </div>
+
+    <!-- Session conflict dialog -->
+    <Teleport to="body">
+        <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+        >
+            <div v-if="showConflict" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                <Transition
+                    appear
+                    enter-active-class="transition duration-200 ease-out"
+                    enter-from-class="opacity-0 scale-95"
+                    enter-to-class="opacity-100 scale-100"
+                >
+                    <div class="bg-card border border-border rounded-2xl p-6 space-y-4 max-w-sm w-full">
+                        <h3 class="font-semibold text-lg text-text">Session läuft noch</h3>
+                        <p class="text-sm text-text-muted">
+                            Du hast noch eine aktive Session für
+                            <span class="font-semibold text-text">„{{ activeSession.meta.value?.workoutName }}"</span>.
+                            Was möchtest du tun?
+                        </p>
+                        <div class="flex flex-col gap-2">
+                            <button @click="confirmResume" class="w-full bg-primary-500 hover:bg-primary-600 text-white rounded-xl py-2.5 font-semibold text-sm transition-colors">Aktive Session fortsetzen</button>
+                            <button @click="confirmDiscard" class="w-full bg-surface hover:bg-surface-hover border border-border text-text rounded-xl py-2.5 font-semibold text-sm transition-colors">Session verwerfen &amp; neu starten</button>
+                            <button @click="cancelConflict" class="w-full text-text-muted hover:text-text text-sm py-1.5 transition-colors">Abbrechen</button>
+                        </div>
+                    </div>
+                </Transition>
+            </div>
+        </Transition>
+    </Teleport>
 </template>
 

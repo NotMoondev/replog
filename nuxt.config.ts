@@ -1,13 +1,32 @@
-import tailwindcss from "@tailwindcss/vite";
+import tailwindcss from "@tailwindcss/vite"
+import { execSync } from "node:child_process"
 
 const rawBaseURL = (globalThis as { process?: { env?: Record<string, string | undefined> } })
-    .process?.env?.NUXT_APP_BASE_URL ?? "/";
-const baseURL = `/${rawBaseURL.replace(/^\/+|\/+$/g, "")}/`.replace("//", "/");
+    .process?.env?.NUXT_APP_BASE_URL ?? "/"
+const baseURL = `/${rawBaseURL.replace(/^\/+|\/+$/g, "")}/`.replace("//", "/")
+
+function getAppVersion(): string {
+    if (process.env.APP_VERSION) return process.env.APP_VERSION
+    try {
+        return execSync('git describe --tags --match "v*.*.*" --abbrev=0', { stdio: ['pipe', 'pipe', 'pipe'] })
+            .toString()
+            .trim()
+    } catch {
+        return 'dev'
+    }
+}
+
+const appVersion = getAppVersion();
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
     compatibilityDate: '2025-07-15',
     ssr: false,
+    runtimeConfig: {
+        public: {
+            appVersion,
+        },
+    },
     app: {
         baseURL,
         head: {
@@ -90,7 +109,7 @@ export default defineNuxtConfig({
         devOptions: {
             enabled: true,
             type: 'module',
-            },
+        },
         client: {
             installPrompt: true,
             periodicSyncForUpdates: 3600,
