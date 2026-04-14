@@ -150,7 +150,8 @@ async function handleDelete() {
             <!-- Start + Add Buttons -->
             <button
                 @click="handleStartWorkout"
-                class="w-full bg-primary-500 hover:bg-primary-600 rounded-xl py-3 font-semibold text-sm text-center flex items-center justify-center gap-2 transition-colors"
+                :disabled="workout.exercises.length === 0"
+                class="w-full bg-primary-500 hover:bg-primary-600 rounded-xl py-3 font-semibold text-sm text-center flex items-center justify-center gap-2 transition-colors disabled:bg-primary-500/50 disabled:hover:bg-primary-500/50 disabled:cursor-not-allowed disabled:text-white/70"
             >
                 <IconPlay class="w-5 h-5" />
                 {{ activeSession.isActive.value && activeSession.meta.value?.workoutId === workout.id ? 'Session fortsetzen' : 'Workout starten' }}

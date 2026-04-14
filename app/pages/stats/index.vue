@@ -90,7 +90,7 @@ function getExerciseChartData(exerciseId: string) {
     } else {
         const datasets = []
         if (exercise.metric !== 'none') {
-            const metricLabel = exercise.metric === 'intensity' ? 'Intensität' : 'Geschwindigkeit (km/h)'
+            const metricLabel = exercise.metric === 'intensity' ? 'Stufe' : 'Geschwindigkeit (km/h)'
             datasets.push({
                 ...baseStyle,
                 label: metricLabel,
@@ -204,7 +204,7 @@ const exerciseChartData = computed(() => {
                     <p class="text-xs text-text-muted">
                         {{ exercise.type === 'strength' ? 'Kraft' : 'Cardio' }}
                         <span v-if="exercise.type === 'cardio' && exercise.metric !== 'none'">
-                            · {{ exercise.metric === 'intensity' ? 'Intensität' : 'Geschwindigkeit' }}
+                            · {{ exercise.metric === 'intensity' ? 'Stufe' : 'Geschwindigkeit' }}
                         </span>
                     </p>
                 </div>

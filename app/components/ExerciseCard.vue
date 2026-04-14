@@ -78,8 +78,17 @@ function formatDuration(secs: number): string {
                 <IconGauge v-if="exercise.metric === 'speed'" class="w-3.5 h-3.5 text-blue-400" />
                 <IconFlame v-else class="w-3.5 h-3.5 text-blue-400" />
                 <span class="font-medium">{{ exercise.metricValue }}<span class="text-text-muted font-normal"> {{ exercise.metric === 'speed' ? 'km/h' : '' }}</span></span>
-                <span class="text-xs text-text-muted">{{ exercise.metric === 'intensity' ? 'Intensität' : 'Geschw.' }}</span>
+                <span class="text-xs text-text-muted">{{ exercise.metric === 'intensity' ? 'Stufe' : 'Geschw.' }}</span>
             </div>
+        </div>
+
+        <!-- Muscle group tags -->
+        <div v-if="exercise.muscleGroups?.length" class="flex flex-wrap gap-1">
+            <span
+                v-for="mg in exercise.muscleGroups"
+                :key="mg"
+                class="text-xs px-2 py-0.5 rounded-full bg-surface text-text-muted border border-border/60"
+            >{{ mg }}</span>
         </div>
     </div>
 </template>

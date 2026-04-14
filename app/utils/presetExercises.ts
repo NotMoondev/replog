@@ -13,6 +13,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Bankdrücken',
         mode: 'reps+weight',
         sets: [{ reps: 8, weight: 60 }, { reps: 8, weight: 60 }, { reps: 8, weight: 60 }],
+        muscleGroups: ['Brust', 'Trizeps', 'Schultern'],
     },
     {
         id: 'preset-schraegbank',
@@ -20,6 +21,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Schrägbankdrücken',
         mode: 'reps+weight',
         sets: [{ reps: 10, weight: 50 }, { reps: 10, weight: 50 }, { reps: 10, weight: 50 }],
+        muscleGroups: ['Brust', 'Trizeps', 'Schultern'],
     },
     {
         id: 'preset-butterfly',
@@ -27,6 +29,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Butterfly',
         mode: 'reps+weight',
         sets: [{ reps: 12, weight: 40 }, { reps: 12, weight: 40 }, { reps: 12, weight: 40 }],
+        muscleGroups: ['Brust'],
     },
     {
         id: 'preset-liegestuetze',
@@ -34,6 +37,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Liegestütze',
         mode: 'reps',
         sets: [{ reps: 15 }, { reps: 15 }, { reps: 15 }],
+        muscleGroups: ['Brust', 'Trizeps', 'Schultern'],
     },
     {
         id: 'preset-dips',
@@ -41,6 +45,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Dips',
         mode: 'reps',
         sets: [{ reps: 10 }, { reps: 10 }, { reps: 10 }],
+        muscleGroups: ['Brust', 'Trizeps'],
     },
 
     // ── Rücken ─────────────────────────────────────────────────────────────
@@ -50,6 +55,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Kreuzheben',
         mode: 'reps+weight',
         sets: [{ reps: 5, weight: 100 }, { reps: 5, weight: 100 }, { reps: 5, weight: 100 }],
+        muscleGroups: ['Rücken', 'Gesäß', 'Beinbeuger'],
     },
     {
         id: 'preset-klimmzuege',
@@ -57,6 +63,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Klimmzüge',
         mode: 'reps',
         sets: [{ reps: 8 }, { reps: 8 }, { reps: 8 }],
+        muscleGroups: ['Rücken', 'Bizeps'],
     },
     {
         id: 'preset-latzug',
@@ -64,6 +71,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Latzug',
         mode: 'reps+weight',
         sets: [{ reps: 10, weight: 60 }, { reps: 10, weight: 60 }, { reps: 10, weight: 60 }],
+        muscleGroups: ['Rücken', 'Bizeps'],
     },
     {
         id: 'preset-rudern-kabel',
@@ -71,6 +79,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Kabelrudern',
         mode: 'reps+weight',
         sets: [{ reps: 12, weight: 50 }, { reps: 12, weight: 50 }, { reps: 12, weight: 50 }],
+        muscleGroups: ['Rücken', 'Bizeps'],
     },
     {
         id: 'preset-rudern-kurzhantel',
@@ -78,6 +87,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Kurzhantelrudern',
         mode: 'reps+weight',
         sets: [{ reps: 10, weight: 30 }, { reps: 10, weight: 30 }, { reps: 10, weight: 30 }],
+        muscleGroups: ['Rücken', 'Bizeps'],
     },
     {
         id: 'preset-face-pulls',
@@ -85,6 +95,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Face Pulls',
         mode: 'reps+weight',
         sets: [{ reps: 15, weight: 20 }, { reps: 15, weight: 20 }, { reps: 15, weight: 20 }],
+        muscleGroups: ['Schultern', 'Rücken'],
     },
 
     // ── Beine ──────────────────────────────────────────────────────────────
@@ -94,6 +105,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Kniebeugen',
         mode: 'reps+weight',
         sets: [{ reps: 8, weight: 80 }, { reps: 8, weight: 80 }, { reps: 8, weight: 80 }, { reps: 8, weight: 80 }],
+        muscleGroups: ['Quadrizeps', 'Gesäß', 'Beinbeuger'],
     },
     {
         id: 'preset-beinpresse',
@@ -101,6 +113,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Beinpresse',
         mode: 'reps+weight',
         sets: [{ reps: 10, weight: 120 }, { reps: 10, weight: 120 }, { reps: 10, weight: 120 }],
+        muscleGroups: ['Quadrizeps', 'Gesäß'],
     },
     {
         id: 'preset-beinstrecken',
@@ -108,6 +121,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Beinstrecken',
         mode: 'reps+weight',
         sets: [{ reps: 12, weight: 50 }, { reps: 12, weight: 50 }, { reps: 12, weight: 50 }],
+        muscleGroups: ['Quadrizeps'],
     },
     {
         id: 'preset-beinbeugen',
@@ -115,6 +129,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Beinbeugen',
         mode: 'reps+weight',
         sets: [{ reps: 12, weight: 40 }, { reps: 12, weight: 40 }, { reps: 12, weight: 40 }],
+        muscleGroups: ['Beinbeuger'],
     },
     {
         id: 'preset-rumaenisches-kreuzheben',
@@ -122,6 +137,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Rumänisches Kreuzheben',
         mode: 'reps+weight',
         sets: [{ reps: 10, weight: 70 }, { reps: 10, weight: 70 }, { reps: 10, weight: 70 }],
+        muscleGroups: ['Beinbeuger', 'Gesäß', 'Rücken'],
     },
     {
         id: 'preset-ausfallschritte',
@@ -129,6 +145,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Ausfallschritte',
         mode: 'reps+weight',
         sets: [{ reps: 12, weight: 20 }, { reps: 12, weight: 20 }, { reps: 12, weight: 20 }],
+        muscleGroups: ['Quadrizeps', 'Gesäß', 'Beinbeuger'],
     },
     {
         id: 'preset-goblet-squat',
@@ -136,6 +153,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Goblet Squat',
         mode: 'reps+weight',
         sets: [{ reps: 12, weight: 24 }, { reps: 12, weight: 24 }, { reps: 12, weight: 24 }],
+        muscleGroups: ['Quadrizeps', 'Gesäß'],
     },
     {
         id: 'preset-hip-thrust',
@@ -143,6 +161,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Hip Thrust',
         mode: 'reps+weight',
         sets: [{ reps: 10, weight: 80 }, { reps: 10, weight: 80 }, { reps: 10, weight: 80 }],
+        muscleGroups: ['Gesäß', 'Beinbeuger'],
     },
     {
         id: 'preset-wadenheben',
@@ -150,6 +169,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Wadenheben',
         mode: 'reps+weight',
         sets: [{ reps: 15, weight: 60 }, { reps: 15, weight: 60 }, { reps: 15, weight: 60 }],
+        muscleGroups: ['Waden'],
     },
 
     // ── Schultern ──────────────────────────────────────────────────────────
@@ -159,6 +179,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Schulterdrücken',
         mode: 'reps+weight',
         sets: [{ reps: 10, weight: 40 }, { reps: 10, weight: 40 }, { reps: 10, weight: 40 }],
+        muscleGroups: ['Schultern', 'Trizeps'],
     },
     {
         id: 'preset-seitheben',
@@ -166,6 +187,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Seitheben',
         mode: 'reps+weight',
         sets: [{ reps: 12, weight: 10 }, { reps: 12, weight: 10 }, { reps: 12, weight: 10 }],
+        muscleGroups: ['Schultern'],
     },
     {
         id: 'preset-frontheben',
@@ -173,6 +195,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Frontheben',
         mode: 'reps+weight',
         sets: [{ reps: 12, weight: 10 }, { reps: 12, weight: 10 }, { reps: 12, weight: 10 }],
+        muscleGroups: ['Schultern'],
     },
 
     // ── Arme ───────────────────────────────────────────────────────────────
@@ -182,6 +205,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Bizeps Curl',
         mode: 'reps+weight',
         sets: [{ reps: 12, weight: 15 }, { reps: 12, weight: 15 }, { reps: 12, weight: 15 }],
+        muscleGroups: ['Bizeps'],
     },
     {
         id: 'preset-hammer-curls',
@@ -189,6 +213,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Hammer Curls',
         mode: 'reps+weight',
         sets: [{ reps: 12, weight: 14 }, { reps: 12, weight: 14 }, { reps: 12, weight: 14 }],
+        muscleGroups: ['Bizeps'],
     },
     {
         id: 'preset-trizepsdruecken',
@@ -196,6 +221,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Trizepsdrücken',
         mode: 'reps+weight',
         sets: [{ reps: 12, weight: 30 }, { reps: 12, weight: 30 }, { reps: 12, weight: 30 }],
+        muscleGroups: ['Trizeps'],
     },
     {
         id: 'preset-trizeps-overhead',
@@ -203,6 +229,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Trizeps Overhead Extension',
         mode: 'reps+weight',
         sets: [{ reps: 12, weight: 20 }, { reps: 12, weight: 20 }, { reps: 12, weight: 20 }],
+        muscleGroups: ['Trizeps'],
     },
 
     // ── Core ───────────────────────────────────────────────────────────────
@@ -212,6 +239,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Sit-Ups',
         mode: 'reps',
         sets: [{ reps: 20 }, { reps: 20 }, { reps: 20 }],
+        muscleGroups: ['Bauch'],
     },
     {
         id: 'preset-plank',
@@ -219,6 +247,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Plank',
         mode: 'time',
         sets: [{ duration: 60 }, { duration: 60 }, { duration: 60 }],
+        muscleGroups: ['Bauch'],
     },
     {
         id: 'preset-russian-twist',
@@ -226,6 +255,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Russian Twist',
         mode: 'reps',
         sets: [{ reps: 20 }, { reps: 20 }, { reps: 20 }],
+        muscleGroups: ['Bauch'],
     },
     {
         id: 'preset-beinheben',
@@ -233,6 +263,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Beinheben (liegend)',
         mode: 'reps',
         sets: [{ reps: 15 }, { reps: 15 }, { reps: 15 }],
+        muscleGroups: ['Bauch'],
     },
     {
         id: 'preset-kabelzug-bauch',
@@ -240,6 +271,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Kabelzug Bauch',
         mode: 'reps+weight',
         sets: [{ reps: 15, weight: 20 }, { reps: 15, weight: 20 }, { reps: 15, weight: 20 }],
+        muscleGroups: ['Bauch'],
     },
 
     // ── Cardio ─────────────────────────────────────────────────────────────
@@ -250,6 +282,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         duration: 1800,
         metric: 'speed',
         metricValue: 10,
+        muscleGroups: ['Cardio'],
     },
     {
         id: 'preset-fahrrad',
@@ -258,6 +291,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         duration: 1800,
         metric: 'speed',
         metricValue: 25,
+        muscleGroups: ['Cardio'],
     },
     {
         id: 'preset-rudern-ergometer',
@@ -266,14 +300,15 @@ export const PRESET_EXERCISES: Exercise[] = [
         duration: 1200,
         metric: 'intensity',
         metricValue: 4,
+        muscleGroups: ['Cardio'],
     },
     {
         id: 'preset-seilspringen',
         type: 'cardio',
         name: 'Seilspringen',
         duration: 600,
-        metric: 'intensity',
-        metricValue: 3,
+        metric: 'none',
+        muscleGroups: ['Cardio'],
     },
     {
         id: 'preset-ellipsentrainer',
@@ -282,6 +317,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         duration: 1800,
         metric: 'intensity',
         metricValue: 5,
+        muscleGroups: ['Cardio'],
     },
     {
         id: 'preset-hiit',
@@ -290,6 +326,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         duration: 1200,
         metric: 'intensity',
         metricValue: 8,
+        muscleGroups: ['Cardio'],
     },
     {
         id: 'preset-schwimmen',
@@ -297,5 +334,6 @@ export const PRESET_EXERCISES: Exercise[] = [
         name: 'Schwimmen',
         duration: 1800,
         metric: 'none',
+        muscleGroups: ['Cardio'],
     },
 ]

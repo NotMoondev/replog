@@ -1,9 +1,10 @@
-import type { StrengthMode } from '~/types/workout'
+import type { StrengthMode, MuscleGroup } from '~/types/workout'
 
 export interface WorkoutSessionExercise {
     exerciseId: string
     exerciseName?: string
     strengthMode?: StrengthMode
+    muscleGroups?: MuscleGroup[]
 
     sets?: {
         reps?: number

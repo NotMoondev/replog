@@ -8,7 +8,8 @@ const props = defineProps<{
     exerciseIndex?: number
 }>()
 
-import type { Exercise, StrengthMode } from '~/types/workout'
+import type { Exercise, StrengthMode, MuscleGroup } from '~/types/workout'
+import { ALL_MUSCLE_GROUPS } from '~/types/workout'
 
 const emit = defineEmits<{
     close: []
@@ -30,6 +31,13 @@ type Mode = StrengthMode | 'cardio'
 const mode = ref<Mode>('reps+weight')
 const name = ref('')
 const nameError = ref(false)
+const muscleGroups = ref<MuscleGroup[]>([])
+
+function toggleMuscleGroup(mg: MuscleGroup) {
+    const idx = muscleGroups.value.indexOf(mg)
+    if (idx === -1) muscleGroups.value.push(mg)
+    else muscleGroups.value.splice(idx, 1)
+}
 
 /* Strength sets – reps/weight/duration fields are all optional depending on mode */
 const sets = ref<Array<{ reps?: number; weight?: number; duration?: number }>>([
@@ -80,13 +88,16 @@ function switchDurationUnit(unit: 's' | 'min') {
 }
 
 // Reset sets to a single empty row when mode changes, to avoid stale columns
+const isInitializing = ref(true)
 watch(mode, () => {
+    if (isInitializing.value) return
     sets.value = [{ reps: undefined, weight: undefined, duration: undefined }]
 })
 
 onMounted(() => {
     if (props.initialExercise) {
         name.value = props.initialExercise.name
+        muscleGroups.value = props.initialExercise.muscleGroups ? [...props.initialExercise.muscleGroups] : []
         if (props.initialExercise.type === 'strength') {
             const m: StrengthMode = props.initialExercise.mode ?? 'reps+weight'
             mode.value = m
@@ -113,6 +124,7 @@ onMounted(() => {
             metricValue.value = props.initialExercise.metricValue
         }
     }
+    nextTick(() => { isInitializing.value = false })
 })
 
 async function save() {
@@ -125,6 +137,8 @@ async function save() {
     const id = props.initialExercise?.id ?? crypto.randomUUID()
     let exercise: any
 
+    const mgs = muscleGroups.value.length > 0 ? [...muscleGroups.value] : undefined
+
     if (mode.value === 'cardio') {
         exercise = {
             id,
@@ -133,6 +147,7 @@ async function save() {
             duration: duration.value ?? 0,
             metric: metric.value,
             metricValue: metric.value !== 'none' ? metricValue.value : undefined,
+            muscleGroups: mgs,
         }
     } else {
         exercise = {
@@ -141,6 +156,7 @@ async function save() {
             mode: mode.value,
             name: name.value.trim(),
             sets: sets.value,
+            muscleGroups: mgs,
         }
     }
 
@@ -339,7 +355,7 @@ async function save() {
                         <button @click="metric = 'intensity'" :class="[
                             'flex-1 py-2 rounded-lg text-xs font-medium transition-colors',
                             metric === 'intensity' ? 'bg-primary-500 text-white' : 'text-text-muted hover:text-text'
-                        ]">Intensität</button>
+                        ]">Stufe</button>
                         <button @click="metric = 'speed'" :class="[
                             'flex-1 py-2 rounded-lg text-xs font-medium transition-colors',
                             metric === 'speed' ? 'bg-primary-500 text-white' : 'text-text-muted hover:text-text'
@@ -347,8 +363,26 @@ async function save() {
                     </div>
 
                     <input v-if="metric !== 'none'" v-model.number="metricValue" type="number"
-                        :placeholder="metric === 'intensity' ? 'Intensität' : 'Geschwindigkeit (km/h)'"
+                        :placeholder="metric === 'intensity' ? 'Stufe' : 'Geschwindigkeit (km/h)'"
                         class="w-full bg-surface border border-border rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-500 transition-colors" />
+                </div>
+
+                <!-- Muscle Groups -->
+                <div class="flex flex-col gap-2">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-text-muted">Muskelgruppen <span class="font-normal normal-case">(optional)</span></span>
+                    <div class="flex flex-wrap gap-1.5">
+                        <button
+                            v-for="mg in ALL_MUSCLE_GROUPS"
+                            :key="mg"
+                            @click="toggleMuscleGroup(mg)"
+                            class="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
+                            :class="muscleGroups.includes(mg)
+                                ? 'bg-primary-500/20 border-primary-500 text-primary-400'
+                                : 'bg-surface border-border text-text-muted hover:border-primary-500/50 hover:text-text'"
+                        >
+                            {{ mg }}
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Save -->

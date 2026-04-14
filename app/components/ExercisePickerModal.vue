@@ -59,6 +59,22 @@ function onCreateModalClose() {
     showCreateModal.value = false
     if (!props.sessionMode) emit('close')
 }
+
+function formatDuration(seconds: number): string {
+    if (seconds <= 0) return '0 s'
+    const h = Math.floor(seconds / 3600)
+    const m = Math.floor((seconds % 3600) / 60)
+    const s = seconds % 60
+    if (h > 0) return m > 0 ? `${h} h ${m} min` : `${h} h`
+    if (m > 0) return s > 0 ? `${m} min ${s} s` : `${m} min`
+    return `${s} s`
+}
+
+function formatMetric(metric: string, value: number | undefined): string {
+    if (metric === 'speed' && value != null) return `${value} km/h`
+    if (metric === 'intensity' && value != null) return `Stufe ${value}`
+    return ''
+}
 </script>
 
 <template>
@@ -145,8 +161,15 @@ function onCreateModalClose() {
                                 <template v-if="ex.sets[0]?.weight"> · {{ ex.sets[0].weight }} kg</template>
                             </p>
                             <p v-else class="text-xs text-text-muted mt-0.5">
-                                {{ ex.duration }} s
+                                {{ formatDuration(ex.duration) }}<template v-if="formatMetric(ex.metric, ex.metricValue)"> · {{ formatMetric(ex.metric, ex.metricValue) }}</template>
                             </p>
+                            <div v-if="ex.muscleGroups?.length" class="flex flex-wrap gap-1 mt-1.5">
+                                <span
+                                    v-for="mg in ex.muscleGroups"
+                                    :key="mg"
+                                    class="text-xs px-1.5 py-0.5 rounded-full bg-surface-hover text-text-muted border border-border/50"
+                                >{{ mg }}</span>
+                            </div>
                         </div>
                         <button
                             @click="addToWorkout(ex)"

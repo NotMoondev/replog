@@ -124,8 +124,16 @@ async function handleDelete(id: string) {
                             <div v-if="ex.metric !== 'none' && ex.metricValue != null"
                                 class="flex items-center gap-1.5 bg-surface rounded-lg px-2.5 py-1 text-xs">
                                 <span class="font-medium">{{ ex.metricValue }}</span>
-                                <span class="text-text-muted">{{ ex.metric === 'speed' ? 'km/h' : 'Intensität' }}</span>
+                                <span class="text-text-muted">{{ ex.metric === 'speed' ? 'km/h' : 'Stufe' }}</span>
                             </div>
+                        </div>
+                        <!-- Muscle groups -->
+                        <div v-if="ex.muscleGroups?.length" class="flex flex-wrap gap-1 mt-1">
+                            <span
+                                v-for="mg in ex.muscleGroups"
+                                :key="mg"
+                                class="text-xs px-2 py-0.5 rounded-full bg-surface text-text-muted border border-border/60"
+                            >{{ mg }}</span>
                         </div>
                     </div>
 

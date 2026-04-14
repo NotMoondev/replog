@@ -251,6 +251,7 @@ async function finish() {
                     duration: strengthMode === 'time' ? s.duration : undefined,
                 })),
                 note: d.note || undefined,
+                muscleGroups: (ex as any).muscleGroups?.length ? [...(ex as any).muscleGroups] : undefined,
             })
         } else {
             if (!d.completed) continue
@@ -260,6 +261,7 @@ async function finish() {
                 duration: d.duration,
                 metricValue: d.metricValue,
                 note: d.note || undefined,
+                muscleGroups: (ex as any).muscleGroups?.length ? [...(ex as any).muscleGroups] : undefined,
             })
         }
     }

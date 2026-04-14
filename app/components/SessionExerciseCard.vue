@@ -57,7 +57,7 @@ const strengthMode = computed(() => {
 
 const metricLabel = computed(() => {
     if (props.exercise.type !== 'cardio') return ''
-    if (props.exercise.metric === 'intensity') return 'Intensität'
+    if (props.exercise.metric === 'intensity') return 'Stufe'
     if (props.exercise.metric === 'speed') return 'km/h'
     return ''
 })

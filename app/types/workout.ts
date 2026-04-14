@@ -4,12 +4,31 @@ export type Exercise =
 
 export type StrengthMode = 'reps+weight' | 'reps' | 'time'
 
+export type MuscleGroup =
+    | 'Brust'
+    | 'Rücken'
+    | 'Schultern'
+    | 'Bizeps'
+    | 'Trizeps'
+    | 'Bauch'
+    | 'Quadrizeps'
+    | 'Beinbeuger'
+    | 'Gesäß'
+    | 'Waden'
+    | 'Cardio'
+
+export const ALL_MUSCLE_GROUPS: MuscleGroup[] = [
+    'Brust', 'Rücken', 'Schultern', 'Bizeps', 'Trizeps',
+    'Bauch', 'Quadrizeps', 'Beinbeuger', 'Gesäß', 'Waden', 'Cardio',
+]
+
 export interface StrengthExercise {
     id: string
     type: 'strength'
     name: string
     mode?: StrengthMode // defaults to 'reps+weight' when absent
     sets: StrengthSet[]
+    muscleGroups?: MuscleGroup[]
 }
 
 export interface StrengthSet {
@@ -25,6 +44,7 @@ export interface CardioExercise {
     duration: number // in seconds
     metric: 'intensity' | 'speed' | 'none'
     metricValue?: number
+    muscleGroups?: MuscleGroup[]
 }
 
 export interface Workout {

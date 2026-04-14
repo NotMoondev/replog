@@ -2,6 +2,7 @@
 import { useSessionStore, computeVolume, computeRepsVolume, computeCardioScore, computeCardioDuration } from '~/stores/useSessionStore'
 import { useWorkoutStore } from '~/stores/useWorkoutStore'
 import type { WorkoutSessionExercise } from '~/types/session'
+import type { MuscleGroup } from '~/types/workout'
 
 const route = useRoute()
 const sessionStore = useSessionStore()
@@ -161,6 +162,53 @@ function formatDuration(seconds?: number): string | null {
     if (m === 0) return `${s}s`
     return s > 0 ? `${m} min ${s}s` : `${m} min`
 }
+
+// Muscle group breakdown
+const MUSCLE_GROUP_COLORS: Record<string, string> = {
+    'Brust':       'bg-rose-500',
+    'Rücken':      'bg-sky-500',
+    'Schultern':   'bg-violet-500',
+    'Bizeps':      'bg-amber-500',
+    'Trizeps':     'bg-orange-500',
+    'Bauch':       'bg-yellow-500',
+    'Quadrizeps':  'bg-emerald-500',
+    'Beinbeuger':  'bg-teal-500',
+    'Gesäß':       'bg-pink-500',
+    'Waden':       'bg-lime-500',
+    'Cardio':      'bg-blue-500',
+}
+
+const muscleGroupStats = computed(() => {
+    if (!session.value) return []
+    const scores = new Map<MuscleGroup, number>()
+
+    for (const ex of session.value.exercises) {
+        if (!ex.muscleGroups?.length) continue
+        let score = 0
+        if (ex.sets && ex.sets.length > 0) {
+            if (ex.strengthMode === 'time') {
+                score = ex.sets.reduce((sum, s) => sum + (s.duration ?? 0), 0)
+            } else if (ex.strengthMode === 'reps') {
+                score = ex.sets.reduce((sum, s) => sum + (s.reps ?? 0), 0) * 10
+            } else {
+                const vol = ex.sets.reduce((sum, s) => sum + (s.reps ?? 0) * (s.weight ?? 0), 0)
+                score = vol > 0 ? vol : ex.sets.reduce((sum, s) => sum + (s.reps ?? 0), 0) * 10
+            }
+        } else {
+            score = (ex.duration ?? 0) * Math.max(ex.metricValue ?? 1, 1)
+        }
+        const share = score / ex.muscleGroups.length
+        for (const mg of ex.muscleGroups) {
+            scores.set(mg, (scores.get(mg) ?? 0) + share)
+        }
+    }
+
+    if (scores.size === 0) return []
+    const total = Array.from(scores.values()).reduce((a, b) => a + b, 0)
+    return Array.from(scores.entries())
+        .map(([group, score]) => ({ group, percent: Math.round(score / total * 100) }))
+        .sort((a, b) => b.percent - a.percent)
+})
 </script>
 
 <template>
@@ -265,6 +313,26 @@ function formatDuration(seconds?: number): string | null {
                         </div>
                     </template>
                     <div v-else class="text-xs text-text-muted self-center">Erste Session für dieses Workout</div>
+                </div>
+            </div>
+
+            <!-- Muscle group breakdown -->
+            <div v-if="muscleGroupStats.length > 0" class="bg-card border border-border rounded-2xl p-4 space-y-3">
+                <h2 class="font-medium text-sm">Beanspruchte Muskelgruppen</h2>
+                <div class="space-y-2">
+                    <div v-for="item in muscleGroupStats" :key="item.group" class="space-y-1">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="font-medium">{{ item.group }}</span>
+                            <span class="text-text-muted tabular-nums">{{ item.percent }}%</span>
+                        </div>
+                        <div class="h-2 bg-surface rounded-full overflow-hidden">
+                            <div
+                                class="h-full rounded-full transition-all duration-500"
+                                :class="MUSCLE_GROUP_COLORS[item.group] ?? 'bg-primary-500'"
+                                :style="{ width: `${item.percent}%` }"
+                            />
+                        </div>
+                    </div>
                 </div>
             </div>
 
