@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useExerciseStore } from '~/stores/useExerciseStore'
+import { PRESET_EXERCISES } from '~/utils/presetExercises'
 import type { Exercise } from '~/types/workout'
 
 const store = useExerciseStore()
@@ -7,11 +8,13 @@ const showCreateModal = ref(false)
 const editingExercise = ref<Exercise | null>(null)
 const confirmingDeleteId = ref<string | null>(null)
 const searchQuery = ref('')
+const activeTab = ref<'mine' | 'presets'>('mine')
 
 const filteredExercises = computed(() => {
     const q = searchQuery.value.toLowerCase().trim()
-    if (!q) return store.exercises
-    return store.exercises.filter(e => e.name.toLowerCase().includes(q))
+    const source = activeTab.value === 'presets' ? PRESET_EXERCISES : store.exercises
+    if (!q) return source
+    return source.filter(e => e.name.toLowerCase().includes(q))
 })
 
 function formatDuration(secs: number): string {
@@ -44,7 +47,7 @@ async function handleDelete(id: string) {
         <!-- Search -->
         <div class="flex items-center gap-2 bg-surface border border-border rounded-xl px-3 py-2.5">
             <IconSearch class="size-4 text-text-muted shrink-0" />
-            <input v-model="searchQuery" placeholder="Suchen…"
+            <input v-model="searchQuery" placeholder="Suchen…" type="search" autocomplete="off"
                 class="flex-1 bg-transparent text-sm outline-none placeholder:text-text-muted" />
             <button v-if="searchQuery" @click="searchQuery = ''"
                 class="text-text-muted hover:text-text transition-colors">
@@ -52,15 +55,35 @@ async function handleDelete(id: string) {
             </button>
         </div>
 
+        <!-- Tabs -->
+        <div class="flex gap-2">
+            <button
+                @click="activeTab = 'mine'"
+                class="flex-1 py-2 rounded-xl text-sm font-medium transition-colors"
+                :class="activeTab === 'mine' ? 'bg-primary-500 text-white' : 'bg-surface text-text-muted hover:text-text'"
+            >
+                Meine Übungen
+            </button>
+            <button
+                @click="activeTab = 'presets'"
+                class="flex-1 py-2 rounded-xl text-sm font-medium transition-colors"
+                :class="activeTab === 'presets' ? 'bg-primary-500 text-white' : 'bg-surface text-text-muted hover:text-text'"
+            >
+                App-Vorlagen
+            </button>
+        </div>
+
         <!-- Loading -->
-        <div v-if="store.loading" class="flex justify-center py-10">
+        <div v-if="store.loading && activeTab === 'mine'" class="flex justify-center py-10">
             <IconLoaderCircle class="size-8 animate-spin text-primary-500" />
         </div>
 
         <!-- Exercise List -->
         <div v-else class="space-y-3">
             <div v-for="ex in filteredExercises" :key="ex.id"
-                class="bg-card border border-border rounded-2xl p-4 cursor-pointer" @click="editingExercise = ex">
+                class="bg-card border border-border rounded-2xl p-4"
+                :class="activeTab === 'mine' ? 'cursor-pointer' : ''"
+                @click="activeTab === 'mine' && (editingExercise = ex)">
                 <div class="flex justify-between items-start gap-2">
                     <div class="min-w-0 flex-1">
                         <div class="flex items-center gap-2 mb-2">
@@ -106,7 +129,7 @@ async function handleDelete(id: string) {
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-2 shrink-0" @click.stop>
+                    <div v-if="activeTab === 'mine'" class="flex items-center gap-2 shrink-0" @click.stop>
                         <template v-if="confirmingDeleteId === ex.id">
                             <button @click="handleDelete(ex.id)"
                                 class="text-red-400 hover:text-red-300 text-sm font-medium transition px-1">
@@ -126,9 +149,9 @@ async function handleDelete(id: string) {
             </div>
 
             <!-- Empty state -->
-            <div v-if="store.exercises.length === 0" class="text-center py-16 space-y-2">
+            <div v-if="activeTab === 'mine' && store.exercises.length === 0" class="text-center py-16 space-y-2">
                 <IconListChecks class="size-10 text-text-muted mx-auto" />
-                <p class="text-sm text-text-muted">Noch keine Übungen in der Bibliothek.</p>
+                <p class="text-sm text-text-muted">Noch keine eigenen Übungen.</p>
                 <p class="text-xs text-text-muted">Klicke auf "Erstellen" um loszulegen.</p>
             </div>
             <div v-else-if="filteredExercises.length === 0" class="text-center py-16 space-y-2">

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useExerciseStore } from '~/stores/useExerciseStore'
 import { useWorkoutStore } from '~/stores/useWorkoutStore'
+import { PRESET_EXERCISES } from '~/utils/presetExercises'
 import type { Exercise } from '~/types/workout'
 
 const props = defineProps<{
@@ -19,6 +20,7 @@ const workoutStore = useWorkoutStore()
 const searchQuery = ref('')
 const showCreateModal = ref(false)
 const adding = ref<string | null>(null)
+const activeTab = ref<'mine' | 'presets'>('mine')
 
 onMounted(() => {
     exerciseStore.loadExercises()
@@ -26,8 +28,9 @@ onMounted(() => {
 
 const filteredExercises = computed(() => {
     const q = searchQuery.value.toLowerCase().trim()
-    if (!q) return exerciseStore.exercises
-    return exerciseStore.exercises.filter(e => e.name.toLowerCase().includes(q))
+    const source = activeTab.value === 'presets' ? PRESET_EXERCISES : exerciseStore.exercises
+    if (!q) return source
+    return source.filter(e => e.name.toLowerCase().includes(q))
 })
 
 async function addToWorkout(exercise: Exercise) {
@@ -81,15 +84,35 @@ function onCreateModalClose() {
                     <div class="flex items-center gap-2 bg-surface border border-border rounded-xl px-3 py-2.5">
                         <IconSearch class="size-4 text-text-muted shrink-0" />
                         <input
-                            v-model="searchQuery"
+                            v-model="searchQuery",
+                            type="search"
+                            autocomplete="off"
                             placeholder="Suchen…"
                             class="flex-1 bg-transparent text-sm outline-none placeholder:text-text-muted"
                         />
                     </div>
                 </div>
 
-                <!-- Button: create new directly in workout -->
-                <div class="px-5 pb-3 shrink-0">
+                <!-- Tabs -->
+                <div class="px-5 pb-3 shrink-0 flex gap-2">
+                    <button
+                        @click="activeTab = 'mine'"
+                        class="flex-1 py-2 rounded-xl text-sm font-medium transition-colors"
+                        :class="activeTab === 'mine' ? 'bg-primary-500 text-white' : 'bg-surface text-text-muted hover:text-text'"
+                    >
+                        Meine Übungen
+                    </button>
+                    <button
+                        @click="activeTab = 'presets'"
+                        class="flex-1 py-2 rounded-xl text-sm font-medium transition-colors"
+                        :class="activeTab === 'presets' ? 'bg-primary-500 text-white' : 'bg-surface text-text-muted hover:text-text'"
+                    >
+                        App-Vorlagen
+                    </button>
+                </div>
+
+                <!-- Button: create new (only on "Meine" tab) -->
+                <div v-if="activeTab === 'mine'" class="px-5 pb-3 shrink-0">
                     <button
                         @click="showCreateModal = true"
                         class="w-full border border-dashed border-primary-500/50 text-primary-400 hover:bg-primary-500/10 rounded-xl py-2.5 text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
@@ -136,11 +159,9 @@ function onCreateModalClose() {
                     </div>
 
                     <!-- Empty library state -->
-                    <div v-if="exerciseStore.exercises.length === 0 && !exerciseStore.loading" class="text-center py-8 space-y-1">
-                        <p class="text-sm text-text-muted">Noch keine Übungen in der Bibliothek.</p>
-                        <NuxtLink to="/exercises" @click="emit('close')" class="text-xs text-primary-400 hover:text-primary-300 transition-colors">
-                            Zur Übungsbibliothek →
-                        </NuxtLink>
+                    <div v-if="activeTab === 'mine' && exerciseStore.exercises.length === 0 && !exerciseStore.loading" class="text-center py-8 space-y-1">
+                        <p class="text-sm text-text-muted">Noch keine eigenen Übungen.</p>
+                        <p class="text-xs text-text-muted">Erstelle eine neue Übung oder wähle aus den App-Vorlagen.</p>
                     </div>
 
                     <!-- No search results -->
