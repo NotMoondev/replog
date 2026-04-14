@@ -19,6 +19,7 @@ interface LocalExercise {
     duration?: number
     metricValue?: number
     skipped?: boolean
+    note?: string
 }
 
 const route = useRoute()
@@ -249,6 +250,7 @@ async function finish() {
                     weight: strengthMode === 'reps+weight' ? s.weight : undefined,
                     duration: strengthMode === 'time' ? s.duration : undefined,
                 })),
+                note: d.note || undefined,
             })
         } else {
             if (!d.completed) continue
@@ -257,6 +259,7 @@ async function finish() {
                 exerciseName: ex.name,
                 duration: d.duration,
                 metricValue: d.metricValue,
+                note: d.note || undefined,
             })
         }
     }

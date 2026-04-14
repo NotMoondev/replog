@@ -16,6 +16,7 @@ interface LocalExercise {
     duration?: number
     metricValue?: number
     skipped?: boolean
+    note?: string
 }
 
 const props = defineProps<{
@@ -165,6 +166,12 @@ const cardStyle = computed(() => ({
 }))
 
 const swipeProgress = computed(() => Math.min(Math.abs(dragX.value) / SWIPE_THRESHOLD, 1))
+
+// Note
+const showNoteInput = ref(!!props.modelValue.note)
+watch(() => props.modelValue.note, (val) => {
+    if (val) showNoteInput.value = true
+})
 </script>
 
 <template>
@@ -399,6 +406,39 @@ const swipeProgress = computed(() => Math.min(Math.abs(dragX.value) / SWIPE_THRE
                         </div>
                     </div>
                 </div>
+            <!-- Note -->
+            <div class="pt-0.5">
+                <button
+                    v-if="!showNoteInput"
+                    @click="showNoteInput = true"
+                    class="text-xs text-text-muted hover:text-primary-400 flex items-center gap-1.5 transition-colors py-0.5"
+                >
+                    <IconNotebookPen class="size-3.5" />
+                    Notiz hinzufügen
+                </button>
+                <div v-else class="space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-text-muted font-medium flex items-center gap-1.5">
+                            <IconNotebookPen class="size-3.5" />
+                            Notiz
+                        </span>
+                        <button
+                            v-if="!modelValue.note"
+                            @click="showNoteInput = false"
+                            class="text-text-muted hover:text-text transition-colors p-0.5"
+                        >
+                            <IconX class="size-3.5" />
+                        </button>
+                    </div>
+                    <textarea
+                        :value="modelValue.note ?? ''"
+                        @input="update({ note: ($event.target as HTMLTextAreaElement).value || undefined })"
+                        placeholder="z.B. Gewicht beim nächsten Mal erhöhen…"
+                        rows="2"
+                        class="w-full bg-surface border border-border rounded-xl px-3 py-2 text-sm outline-none focus:border-primary-500 transition-colors resize-none text-text placeholder:text-text-muted/50"
+                    />
+                </div>
+            </div>
             </template>
         </div>
     </div>

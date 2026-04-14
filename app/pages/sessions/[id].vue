@@ -386,6 +386,12 @@ function formatDuration(seconds?: number): string | null {
                             </div>
                         </div>
                     </template>
+
+                    <!-- Note -->
+                    <div v-if="ex.note" class="flex items-start gap-2 bg-surface/60 border border-border/60 rounded-xl px-3 py-2.5 text-sm text-text-muted">
+                        <IconNotebookPen class="size-3.5 shrink-0 mt-0.5 text-primary-400" />
+                        <span class="leading-snug">{{ ex.note }}</span>
+                    </div>
                 </div>
             </div>
         </template>

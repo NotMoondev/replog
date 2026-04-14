@@ -13,6 +13,7 @@ export interface WorkoutSessionExercise {
 
     duration?: number
     metricValue?: number
+    note?: string
 }
 
 export interface WorkoutSession {
@@ -22,4 +23,5 @@ export interface WorkoutSession {
     date: string
     durationSeconds?: number
     exercises: WorkoutSessionExercise[]
+    note?: string
 }
