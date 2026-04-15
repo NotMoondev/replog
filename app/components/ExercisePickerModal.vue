@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from '~/components/ui/drawer'
 import { useExerciseStore } from '~/stores/useExerciseStore'
 import { useWorkoutStore } from '~/stores/useWorkoutStore'
 import { PRESET_EXERCISES } from '~/utils/presetExercises'
@@ -21,6 +22,7 @@ const searchQuery = ref('')
 const showCreateModal = ref(false)
 const adding = ref<string | null>(null)
 const activeTab = ref<'mine' | 'presets'>('mine')
+const activeSnapPoint = ref<number | string | null>(0.5)
 
 onMounted(() => {
     exerciseStore.loadExercises()
@@ -78,70 +80,75 @@ function formatMetric(metric: string, value: number | undefined): string {
 </script>
 
 <template>
-    <!-- Backdrop -->
-    <div class="fixed inset-0 bg-black/60 flex items-end z-50" @click.self="emit('close')">
-        <Transition
-            enter-active-class="transition-transform duration-[350ms] ease-out"
-            enter-from-class="translate-y-full"
-            enter-to-class="translate-y-0"
-            appear
-        >
-            <div class="w-full bg-card rounded-t-2xl flex flex-col max-h-dvh">
-                <!-- Header -->
-                <div class="flex justify-between items-center px-5 pt-5 pb-3 shrink-0">
-                    <h2 class="font-semibold text-lg">Übung hinzufügen</h2>
-                    <button @click="emit('close')" class="p-1.5 text-text-muted hover:text-text transition-colors">
-                        <IconX class="size-5" />
-                    </button>
+    <Drawer
+        :open="true"
+        @update:open="(val) => { if (!val) emit('close') }"
+        direction="bottom"
+        :snap-points="[0.5, 1]"
+        v-model:active-snap-point="activeSnapPoint"
+        v-bind="({ 'fade-from-index': 0 } as any)"
+    >
+        <DrawerContent class="data-[vaul-drawer-direction=bottom]:h-dvh data-[vaul-drawer-direction=bottom]:max-h-dvh flex flex-col pb-safe">
+            <DrawerHeader class="px-5 pb-0 pt-2 shrink-0">
+                <div class="flex justify-between items-center">
+                    <DrawerTitle class="font-semibold text-lg">Übung hinzufügen</DrawerTitle>
+                    <DrawerClose as-child>
+                        <button class="p-1.5 text-text-muted hover:text-text transition-colors">
+                            <IconX class="size-5" />
+                        </button>
+                    </DrawerClose>
                 </div>
+            </DrawerHeader>
 
-                <!-- Search -->
-                <div class="px-5 pb-3 shrink-0">
-                    <div class="flex items-center gap-2 bg-surface border border-border rounded-xl px-3 py-2.5">
-                        <IconSearch class="size-4 text-text-muted shrink-0" />
-                        <input
-                            v-model="searchQuery",
-                            type="search"
-                            autocomplete="off"
-                            placeholder="Suchen…"
-                            class="flex-1 bg-transparent text-sm outline-none placeholder:text-text-muted"
-                        />
-                    </div>
+            <!-- Search -->
+            <div class="px-5 pt-4 pb-3 shrink-0">
+                <div class="flex items-center gap-2 bg-surface border border-border rounded-xl px-3 py-2.5">
+                    <IconSearch class="size-4 text-text-muted shrink-0" />
+                    <input
+                        v-model="searchQuery"
+                        type="search"
+                        autocomplete="off"
+                        placeholder="Suchen…"
+                        class="flex-1 bg-transparent text-sm outline-none placeholder:text-text-muted"
+                    />
                 </div>
+            </div>
 
-                <!-- Tabs -->
-                <div class="px-5 pb-3 shrink-0 flex gap-2">
-                    <button
-                        @click="activeTab = 'mine'"
-                        class="flex-1 py-2 rounded-xl text-sm font-medium transition-colors"
-                        :class="activeTab === 'mine' ? 'bg-primary-500 text-white' : 'bg-surface text-text-muted hover:text-text'"
-                    >
-                        Meine Übungen
-                    </button>
-                    <button
-                        @click="activeTab = 'presets'"
-                        class="flex-1 py-2 rounded-xl text-sm font-medium transition-colors"
-                        :class="activeTab === 'presets' ? 'bg-primary-500 text-white' : 'bg-surface text-text-muted hover:text-text'"
-                    >
-                        App-Vorlagen
-                    </button>
-                </div>
+            <!-- Tabs -->
+            <div class="px-5 pb-3 shrink-0 flex gap-2">
+                <button
+                    @click="activeTab = 'mine'"
+                    class="flex-1 py-2 rounded-xl text-sm font-medium transition-colors"
+                    :class="activeTab === 'mine' ? 'bg-primary-500 text-white' : 'bg-surface text-text-muted hover:text-text'"
+                >
+                    Meine Übungen
+                </button>
+                <button
+                    @click="activeTab = 'presets'"
+                    class="flex-1 py-2 rounded-xl text-sm font-medium transition-colors"
+                    :class="activeTab === 'presets' ? 'bg-primary-500 text-white' : 'bg-surface text-text-muted hover:text-text'"
+                >
+                    App-Vorlagen
+                </button>
+            </div>
 
-                <!-- Button: create new (only on "Meine" tab) -->
-                <div v-if="activeTab === 'mine'" class="px-5 pb-3 shrink-0">
-                    <button
-                        @click="showCreateModal = true"
-                        class="w-full border border-dashed border-primary-500/50 text-primary-400 hover:bg-primary-500/10 rounded-xl py-2.5 text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
-                    >
-                        <IconPlus class="size-4" />
-                        Neue Übung erstellen
-                    </button>
-                </div>
+            <!-- Button: create new (only on "Meine" tab) -->
+            <div v-if="activeTab === 'mine'" class="px-5 pb-3 shrink-0">
+                <button
+                    @click="showCreateModal = true"
+                    class="w-full border border-dashed border-primary-500/50 text-primary-400 hover:bg-primary-500/10 rounded-xl py-2.5 text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
+                >
+                    <IconPlus class="size-4" />
+                    Neue Übung erstellen
+                </button>
+            </div>
 
-                <hr class="border-border mx-5 shrink-0" />
+            <hr class="border-border mx-5 shrink-0" />
 
-                <!-- Exercise list -->
-                <div class="overflow-y-auto px-5 py-3 space-y-2" style="max-height: 192px">
+            <!-- Exercise list — fills remaining drawer height -->
+            <!-- data-vaul-no-drag prevents vaul from interpreting scroll as a snap-point drag -->
+            <div data-vaul-no-drag class="flex-1 min-h-0 overflow-y-auto px-5 py-3">
+                <div class="space-y-2">
                     <div
                         v-for="ex in filteredExercises"
                         :key="ex.id"
@@ -193,8 +200,8 @@ function formatMetric(metric: string, value: number | undefined): string {
                     </div>
                 </div>
             </div>
-        </Transition>
-    </div>
+        </DrawerContent>
+    </Drawer>
 
     <!-- Nested modal: create new exercise directly into workout -->
     <ExerciseModal
