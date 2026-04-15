@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from '~/components/ui/drawer'
 import { useWorkoutStore } from '~/stores/useWorkoutStore'
 import { useExerciseStore } from '~/stores/useExerciseStore'
 
@@ -32,6 +33,7 @@ const mode = ref<Mode>('reps+weight')
 const name = ref('')
 const nameError = ref(false)
 const muscleGroups = ref<MuscleGroup[]>([])
+const muscleGroupsOpen = ref(false)
 
 function toggleMuscleGroup(mg: MuscleGroup) {
     const idx = muscleGroups.value.indexOf(mg)
@@ -183,18 +185,21 @@ async function save() {
 </script>
 
 <template>
-    <div class="fixed inset-0 bg-black/60 flex items-end z-50" @click.self="emit('close')">
-        <Transition enter-active-class="transition-transform duration-[350ms] ease-out"
-            enter-from-class="translate-y-full" enter-to-class="translate-y-0" appear>
-            <div class="w-full bg-card rounded-t-2xl p-5 flex flex-col gap-4">
-
-                <!-- Header -->
+    <Drawer :open="true" @update:open="(val) => { if (!val) emit('close') }" direction="bottom">
+        <DrawerContent class="px-0 pb-safe">
+            <DrawerHeader class="px-5 pb-0 pt-2">
                 <div class="flex justify-between items-center">
-                    <h2 class="font-semibold text-lg">{{ isEdit ? 'Übung bearbeiten' : 'Neue Übung' }}</h2>
-                    <button @click="emit('close')" class="p-1.5 text-text-muted hover:text-text transition-colors">
-                        <IconX class="size-5" />
-                    </button>
+                    <DrawerTitle class="font-semibold text-lg">{{ isEdit ? 'Übung bearbeiten' : 'Neue Übung' }}
+                    </DrawerTitle>
+                    <DrawerClose as-child>
+                        <button class="p-1.5 text-text-muted hover:text-text transition-colors">
+                            <IconX class="size-5" />
+                        </button>
+                    </DrawerClose>
                 </div>
+            </DrawerHeader>
+
+            <div class="overflow-y-auto flex flex-col gap-4 px-5 pb-6 mt-4">
 
                 <!-- Name -->
                 <input v-model="name" placeholder="Name"
@@ -212,10 +217,13 @@ async function save() {
                                 ? 'bg-primary-500/10 border-primary-500'
                                 : 'bg-surface border-transparent hover:border-border'
                         ]">
-                            <IconDumbbell class="size-4 shrink-0" :class="mode === 'reps+weight' ? 'text-primary-400' : 'text-text-muted'" />
+                            <IconDumbbell class="size-4 shrink-0"
+                                :class="mode === 'reps+weight' ? 'text-primary-400' : 'text-text-muted'" />
                             <div class="flex flex-col min-w-0">
-                                <span class="text-sm font-medium text-text leading-tight truncate">Gewicht &amp; Reps</span>
-                                <span class="text-xs text-text-muted opacity-70 leading-tight truncate">Bankdrücken, Curls</span>
+                                <span class="text-sm font-medium text-text leading-tight truncate">Gewicht &amp;
+                                    Reps</span>
+                                <span class="text-xs text-text-muted opacity-70 leading-tight truncate">Bankdrücken,
+                                    Curls</span>
                             </div>
                         </button>
 
@@ -225,10 +233,12 @@ async function save() {
                                 ? 'bg-primary-500/10 border-primary-500'
                                 : 'bg-surface border-transparent hover:border-border'
                         ]">
-                            <IconRepeat class="size-4 shrink-0" :class="mode === 'reps' ? 'text-primary-400' : 'text-text-muted'" />
+                            <IconRepeat class="size-4 shrink-0"
+                                :class="mode === 'reps' ? 'text-primary-400' : 'text-text-muted'" />
                             <div class="flex flex-col min-w-0">
                                 <span class="text-sm font-medium text-text leading-tight truncate">Nur Reps</span>
-                                <span class="text-xs text-text-muted opacity-70 leading-tight truncate">Liegestütze, Klimmzüge</span>
+                                <span class="text-xs text-text-muted opacity-70 leading-tight truncate">Liegestütze,
+                                    Klimmzüge</span>
                             </div>
                         </button>
 
@@ -238,10 +248,12 @@ async function save() {
                                 ? 'bg-primary-500/10 border-primary-500'
                                 : 'bg-surface border-transparent hover:border-border'
                         ]">
-                            <IconTimer class="size-4 shrink-0" :class="mode === 'time' ? 'text-primary-400' : 'text-text-muted'" />
+                            <IconTimer class="size-4 shrink-0"
+                                :class="mode === 'time' ? 'text-primary-400' : 'text-text-muted'" />
                             <div class="flex flex-col min-w-0">
                                 <span class="text-sm font-medium text-text leading-tight truncate">Nur Zeit</span>
-                                <span class="text-xs text-text-muted opacity-70 leading-tight truncate">Plank, Russian Twists</span>
+                                <span class="text-xs text-text-muted opacity-70 leading-tight truncate">Plank, Russian
+                                    Twists</span>
                             </div>
                         </button>
 
@@ -251,10 +263,12 @@ async function save() {
                                 ? 'bg-primary-500/10 border-primary-500'
                                 : 'bg-surface border-transparent hover:border-border'
                         ]">
-                            <IconHeart class="size-4 shrink-0" :class="mode === 'cardio' ? 'text-primary-400' : 'text-text-muted'" />
+                            <IconHeart class="size-4 shrink-0"
+                                :class="mode === 'cardio' ? 'text-primary-400' : 'text-text-muted'" />
                             <div class="flex flex-col min-w-0">
                                 <span class="text-sm font-medium text-text leading-tight truncate">Cardio</span>
-                                <span class="text-xs text-text-muted opacity-70 leading-tight truncate">Laufen, Radfahren</span>
+                                <span class="text-xs text-text-muted opacity-70 leading-tight truncate">Laufen,
+                                    Radfahren</span>
                             </div>
                         </button>
                     </div>
@@ -279,7 +293,8 @@ async function save() {
 
                     <div class="flex flex-col overflow-y-auto max-h-56 gap-1.5">
                         <div v-for="(set, i) in sets" :key="i" class="flex gap-2 items-center">
-                            <span class="text-xs font-semibold text-text-muted shrink-0 w-6 text-center">{{ i + 1 }}</span>
+                            <span class="text-xs font-semibold text-text-muted shrink-0 w-6 text-center">{{ i + 1
+                                }}</span>
 
                             <!-- reps+weight: reps + kg -->
                             <template v-if="mode === 'reps+weight'">
@@ -369,20 +384,30 @@ async function save() {
 
                 <!-- Muscle Groups -->
                 <div class="flex flex-col gap-2">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-text-muted">Muskelgruppen <span class="font-normal normal-case">(optional)</span></span>
-                    <div class="flex flex-wrap gap-1.5">
-                        <button
-                            v-for="mg in ALL_MUSCLE_GROUPS"
-                            :key="mg"
-                            @click="toggleMuscleGroup(mg)"
-                            class="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
-                            :class="muscleGroups.includes(mg)
-                                ? 'bg-primary-500/20 border-primary-500 text-primary-400'
-                                : 'bg-surface border-border text-text-muted hover:border-primary-500/50 hover:text-text'"
-                        >
-                            {{ mg }}
-                        </button>
-                    </div>
+                    <button @click="muscleGroupsOpen = !muscleGroupsOpen"
+                        class="flex items-center justify-between text-left">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-text-muted">
+                            Muskelgruppen <span class="font-normal normal-case">(optional)</span>
+                            <span v-if="muscleGroups.length > 0" class="ml-1 text-primary-400">({{ muscleGroups.length
+                                }})</span>
+                        </span>
+                        <IconChevronDown class="size-4 text-text-muted transition-transform"
+                            :class="muscleGroupsOpen ? 'rotate-180' : ''" />
+                    </button>
+                    <Transition enter-active-class="transition-all duration-200 ease-out overflow-hidden"
+                        leave-active-class="transition-all duration-150 ease-in overflow-hidden"
+                        enter-from-class="opacity-0 max-h-0" enter-to-class="opacity-100 max-h-96"
+                        leave-from-class="opacity-100 max-h-96" leave-to-class="opacity-0 max-h-0">
+                        <div v-if="muscleGroupsOpen" class="flex flex-wrap gap-1.5">
+                            <button v-for="mg in ALL_MUSCLE_GROUPS" :key="mg" @click="toggleMuscleGroup(mg)"
+                                class="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
+                                :class="muscleGroups.includes(mg)
+                                    ? 'bg-primary-500/20 border-primary-500 text-primary-400'
+                                    : 'bg-surface border-border text-text-muted hover:border-primary-500/50 hover:text-text'">
+                                {{ mg }}
+                            </button>
+                        </div>
+                    </Transition>
                 </div>
 
                 <!-- Save -->
@@ -391,6 +416,6 @@ async function save() {
                     {{ isEdit ? 'Speichern' : 'Hinzufügen' }}
                 </button>
             </div>
-        </Transition>
-    </div>
+        </DrawerContent>
+    </Drawer>
 </template>
