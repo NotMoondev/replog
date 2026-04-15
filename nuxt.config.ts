@@ -45,7 +45,11 @@ export default defineNuxtConfig({
             tailwindcss()
         ]
     },
-    modules: ["@pinia/nuxt", "nuxt-lucide-icons", "@vite-pwa/nuxt"],
+    modules: ["@pinia/nuxt", "nuxt-lucide-icons", "shadcn-nuxt", "@vite-pwa/nuxt"],
+    shadcn: {
+        prefix: '',
+        componentDir: './app/components/ui',
+    },
     pwa: {
         base: baseURL,
         scope: baseURL,
