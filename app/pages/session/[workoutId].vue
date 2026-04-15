@@ -3,6 +3,7 @@ import type { WorkoutSessionExercise } from '~/types/session'
 import type { Exercise, StrengthExercise } from '~/types/workout'
 import { useWorkoutStore } from '~/stores/useWorkoutStore'
 import { useSessionStore } from '~/stores/useSessionStore'
+import { useExerciseStore } from '~/stores/useExerciseStore'
 import { useActiveSession } from '~/composables/useActiveSession'
 
 interface LocalSet {
@@ -26,6 +27,7 @@ const route = useRoute()
 const router = useRouter()
 const workoutStore = useWorkoutStore()
 const sessionStore = useSessionStore()
+const exerciseStore = useExerciseStore()
 const activeSession = useActiveSession()
 
 const workoutId = computed(() => route.params.workoutId as string)
@@ -267,7 +269,7 @@ async function finish() {
     }
 
     const durationSeconds = Math.round((Date.now() - sessionStartTime.value) / 1000)
-    await sessionStore.completeSession(workoutId.value, exercises, durationSeconds, workout.value?.name)
+    const session = await sessionStore.completeSession(workoutId.value, exercises, durationSeconds, workout.value?.name)
 
     // Back-propagate completed values into the workout template (only for original workout exercises)
     if (workout.value) {
@@ -282,21 +284,31 @@ async function finish() {
                 const completedSets = d.sets.filter(s => s.completed)
                 if (completedSets.length === 0) continue
                 const strengthMode = (ex as StrengthExercise).mode ?? 'reps+weight'
-                await workoutStore.updateExercise(workoutId.value, i, {
+                const updatedEx = {
                     ...ex,
                     sets: d.sets.map((s, si) => ({
                         reps: strengthMode !== 'time' ? (s.reps ?? ex.sets[si]?.reps ?? 0) : undefined,
                         weight: strengthMode === 'reps+weight' ? s.weight : undefined,
                         duration: strengthMode === 'time' ? (s.duration ?? ex.sets[si]?.duration) : undefined,
                     })),
-                })
+                }
+                await workoutStore.updateExercise(workoutId.value, i, updatedEx)
+                // Sync values back to preset library entry
+                if ((ex as any).presetId) {
+                    await exerciseStore.updateExercise({ ...updatedEx, id: (ex as any).presetId }, true)
+                }
             } else {
                 if (!d.completed) continue
-                await workoutStore.updateExercise(workoutId.value, i, {
+                const updatedEx = {
                     ...ex,
                     duration: d.duration ?? ex.duration,
                     metricValue: d.metricValue ?? ex.metricValue,
-                })
+                }
+                await workoutStore.updateExercise(workoutId.value, i, updatedEx)
+                // Sync values back to preset library entry
+                if ((ex as any).presetId) {
+                    await exerciseStore.updateExercise({ ...updatedEx, id: (ex as any).presetId }, true)
+                }
             }
         }
     }
@@ -304,7 +316,7 @@ async function finish() {
     saving.value = false
     clearDraft()
     activeSession.clear()
-    router.back()
+    router.replace(`/sessions/${session.id}`)
 }
 </script>
 

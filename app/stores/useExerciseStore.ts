@@ -23,12 +23,18 @@ export const useExerciseStore = defineStore('exercises', {
             useToast().addToast(`"${raw.name}" erstellt`)
         },
 
-        async updateExercise(exercise: Exercise) {
+        async updateExercise(exercise: Exercise, silent = false) {
+            const raw: Exercise = JSON.parse(JSON.stringify(toRaw(exercise)))
             const index = this.exercises.findIndex(e => e.id === exercise.id)
-            if (index === -1) return
-            this.exercises[index] = exercise
-            await db.exercises.put(JSON.parse(JSON.stringify(toRaw(exercise))))
-            useToast().addToast('Übung aktualisiert')
+            if (index === -1) {
+                // First-time override of a preset exercise
+                this.exercises.push(raw)
+                await db.exercises.add(raw)
+            } else {
+                this.exercises[index] = raw
+                await db.exercises.put(raw)
+            }
+            if (!silent) useToast().addToast('Übung aktualisiert')
         },
 
         async deleteExercise(id: string) {

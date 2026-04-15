@@ -10,9 +10,19 @@ const confirmingDeleteId = ref<string | null>(null)
 const searchQuery = ref('')
 const activeTab = ref<'mine' | 'presets'>('mine')
 
+// Map of preset IDs that the user has customised and saved to the store
+const presetOverrides = computed(() =>
+    new Map(store.exercises.filter(e => e.id.startsWith('preset-')).map(e => [e.id, e]))
+)
+
+// Presets merged with user overrides
+const mergedPresets = computed(() =>
+    PRESET_EXERCISES.map(p => presetOverrides.value.get(p.id) ?? p)
+)
+
 const filteredExercises = computed(() => {
     const q = searchQuery.value.toLowerCase().trim()
-    const source = activeTab.value === 'presets' ? PRESET_EXERCISES : store.exercises
+    const source = activeTab.value === 'presets' ? mergedPresets.value : store.exercises.filter(e => !e.id.startsWith('preset-'))
     if (!q) return source
     return source.filter(e => e.name.toLowerCase().includes(q))
 })
@@ -31,6 +41,8 @@ async function handleDelete(id: string) {
     await store.deleteExercise(id)
     confirmingDeleteId.value = null
 }
+
+
 </script>
 
 <template>
@@ -81,9 +93,8 @@ async function handleDelete(id: string) {
         <!-- Exercise List -->
         <div v-else class="space-y-3">
             <div v-for="ex in filteredExercises" :key="ex.id"
-                class="bg-card border border-border rounded-2xl p-4"
-                :class="activeTab === 'mine' ? 'cursor-pointer' : ''"
-                @click="activeTab === 'mine' && (editingExercise = ex)">
+                class="bg-card border border-border rounded-2xl p-4 cursor-pointer"
+                @click="editingExercise = ex">
                 <div class="flex justify-between items-start gap-2">
                     <div class="min-w-0 flex-1">
                         <div class="flex items-center gap-2 mb-2">
@@ -91,6 +102,10 @@ async function handleDelete(id: string) {
                             <span class="text-xs font-medium px-2 py-0.5 rounded-full shrink-0"
                                 :class="ex.type === 'strength' ? 'bg-primary-500/20 text-primary-400' : 'bg-blue-500/20 text-blue-400'">
                                 {{ ex.type === 'strength' ? 'Kraft' : 'Cardio' }}
+                            </span>
+                            <span v-if="activeTab === 'presets' && presetOverrides.has(ex.id)"
+                                class="text-xs font-medium px-2 py-0.5 rounded-full shrink-0 bg-amber-500/20 text-amber-400">
+                                angepasst
                             </span>
                         </div>
                         <!-- Strength: set chips -->
@@ -153,11 +168,13 @@ async function handleDelete(id: string) {
                             <IconTrash2 class="size-4" />
                         </button>
                     </div>
+
+
                 </div>
             </div>
 
             <!-- Empty state -->
-            <div v-if="activeTab === 'mine' && store.exercises.length === 0" class="text-center py-16 space-y-2">
+            <div v-if="activeTab === 'mine' && store.exercises.filter(e => !e.id.startsWith('preset-')).length === 0" class="text-center py-16 space-y-2">
                 <IconListChecks class="size-10 text-text-muted mx-auto" />
                 <p class="text-sm text-text-muted">Noch keine eigenen Übungen.</p>
                 <p class="text-xs text-text-muted">Klicke auf "Erstellen" um loszulegen.</p>

@@ -24,6 +24,8 @@ export const ALL_MUSCLE_GROUPS: MuscleGroup[] = [
 
 export interface StrengthExercise {
     id: string
+    /** ID of the preset this exercise was copied from, if any */
+    presetId?: string
     type: 'strength'
     name: string
     mode?: StrengthMode // defaults to 'reps+weight' when absent
@@ -39,6 +41,8 @@ export interface StrengthSet {
 
 export interface CardioExercise {
     id: string
+    /** ID of the preset this exercise was copied from, if any */
+    presetId?: string
     type: 'cardio'
     name: string
     duration: number // in seconds

@@ -43,6 +43,10 @@ async function addToWorkout(exercise: Exercise) {
     }
     adding.value = exercise.id
     const copy: Exercise = JSON.parse(JSON.stringify(exercise))
+    // Remember the preset origin so session finish can sync values back
+    if (exercise.id.startsWith('preset-')) {
+        (copy as any).presetId = exercise.id
+    }
     copy.id = crypto.randomUUID()
     await workoutStore.addExercise(props.workoutId!, copy)
     adding.value = null
