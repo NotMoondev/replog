@@ -296,44 +296,64 @@ watch(() => props.modelValue.note, (val) => {
 
                         <!-- reps+weight: Reps + Weight -->
                         <template v-if="strengthMode === 'reps+weight'">
-                            <input
-                                type="number"
-                                inputmode="numeric"
-                                :value="set.reps"
-                                :placeholder="lastSet(i)?.reps != null ? String(lastSet(i)!.reps) : '—'"
-                                @input="updateSet(i, { reps: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
-                                :disabled="set.completed"
-                                class="w-full bg-surface border border-border rounded-xl px-2 py-2.5 text-sm text-center outline-none focus:border-primary-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            />
-                            <input
-                                type="number"
-                                inputmode="decimal"
-                                :value="set.weight"
-                                :placeholder="lastSet(i)?.weight != null ? String(lastSet(i)!.weight) : '—'"
-                                @input="updateSet(i, { weight: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
-                                :disabled="set.completed"
-                                class="w-full bg-surface border border-border rounded-xl px-2 py-2.5 text-sm text-center outline-none focus:border-primary-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            />
+                            <div class="flex items-center bg-surface border border-border rounded-xl px-2 text-sm text-center focus-within:border-primary-500 transition-colors">
+                                <button class="py-2.5 px-1" @click="updateSet(i, { reps: set.reps! - 1 })">
+                                    <IconMinus class="size-5" />
+                                </button>
+                                <input
+                                    inputmode="numeric"
+                                    :value="set.reps"
+                                    :placeholder="lastSet(i)?.reps != null ? String(lastSet(i)!.reps) : '—'"
+                                    @input="updateSet(i, { reps: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
+                                    :disabled="set.completed"
+                                    class="w-full text-center outline-none disabled:cursor-not-allowed disabled:opacity-50 py-2.5"
+                                />
+                                <button @click="updateSet(i, { reps: set.reps! + 1 })" class="py-2.5 px-1">
+                                    <IconPlus class="size-5" />
+                                </button>
+                            </div>
+                            <div class="flex items-center bg-surface border border-border rounded-xl px-2 text-sm text-center focus-within:border-primary-500 transition-colors">
+                                <button class="py-2.5 px-1" @click="updateSet(i, { reps: set.reps! - 1 })">
+                                    <IconMinus class="size-5" />
+                                </button>
+                                <input
+                                    inputmode="decimal"
+                                    :value="set.weight"
+                                    :placeholder="lastSet(i)?.weight != null ? String(lastSet(i)!.weight) : '—'"
+                                    @input="updateSet(i, { weight: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
+                                    :disabled="set.completed"
+                                    class="w-full text-center outline-none disabled:cursor-not-allowed disabled:opacity-50 py-2.5"
+                                />
+                                <button @click="updateSet(i, { reps: set.reps! + 1 })" class="py-2.5 px-1">
+                                    <IconPlus class="size-5" />
+                                </button>
+                            </div>
                         </template>
 
                         <!-- reps only -->
                         <template v-else-if="strengthMode === 'reps'">
-                            <input
-                                type="number"
-                                inputmode="numeric"
-                                :value="set.reps"
-                                :placeholder="lastSet(i)?.reps != null ? String(lastSet(i)!.reps) : '—'"
-                                @input="updateSet(i, { reps: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
-                                :disabled="set.completed"
-                                class="w-full bg-surface border border-border rounded-xl px-2 py-2.5 text-sm text-center outline-none focus:border-primary-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            />
+                            <div class="flex items-center bg-surface border border-border rounded-xl px-2 text-sm text-center focus-within:border-primary-500 transition-colors">
+                                <button class="py-2.5 px-1" @click="updateSet(i, { reps: set.reps! - 1 })">
+                                    <IconMinus class="size-5" />
+                                </button>
+                                <input
+                                    inputmode="numeric"
+                                    :value="set.reps"
+                                    :placeholder="lastSet(i)?.reps != null ? String(lastSet(i)!.reps) : '—'"
+                                    @input="updateSet(i, { reps: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
+                                    :disabled="set.completed"
+                                    class="w-full text-center outline-none disabled:cursor-not-allowed disabled:opacity-50 py-2.5"
+                                />
+                                <button @click="updateSet(i, { reps: set.reps! + 1 })" class="py-2.5 px-1">
+                                    <IconPlus class="size-5" />
+                                </button>
+                            </div>
                         </template>
 
                         <!-- time per set -->
                         <template v-else-if="strengthMode === 'time'">
                             <div class="relative">
                                 <input
-                                    type="number"
                                     inputmode="decimal"
                                     :value="getSetDurationDisplay(i)"
                                     @input="setSetDuration(i, ($event.target as HTMLInputElement).valueAsNumber || undefined)"
@@ -378,31 +398,44 @@ watch(() => props.modelValue.note, (val) => {
 
                     <div class="flex gap-2" :class="modelValue.completed ? 'opacity-50 pointer-events-none' : ''">
                         <div class="relative flex-1">
-                            <input
-                                type="number"
-                                inputmode="decimal"
-                                :value="durationDisplay"
-                                @input="durationDisplay = ($event.target as HTMLInputElement).valueAsNumber || undefined"
-                                :placeholder="durationUnit === 'min' ? 'Min' : 'Sek'"
-                                class="w-full bg-surface border border-border rounded-xl px-2.5 py-2.5 pr-10 text-sm outline-none focus:border-primary-500 transition-colors"
-                            />
-                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-muted pointer-events-none">
-                                {{ durationUnit === 'min' ? 'min' : 's' }}
-                            </span>
+                            <div class="flex items-center bg-surface border border-border rounded-xl px-2 text-sm text-center focus-within:border-primary-500 transition-colors">
+                                <button class="py-2.5 px-1" @click="durationDisplay = durationDisplay! - 1">
+                                    <IconMinus class="size-5" />
+                                </button>
+                                <input
+                                    inputmode="decimal"
+                                    :value="durationDisplay"
+                                    @input="durationDisplay = ($event.target as HTMLInputElement).valueAsNumber || undefined"
+                                    :placeholder="durationUnit === 'min' ? 'Min' : 'Sek'"
+                                    class="w-full text-center outline-none disabled:cursor-not-allowed disabled:opacity-50 py-2.5"
+                                />
+                                <button class="py-2.5 px-1" @click="durationDisplay = durationDisplay! + 1">
+                                    <IconPlus class="size-5" />
+                                </button>
+                                <span class="ml-2 text-xs text-text-muted pointer-events-none">
+                                    {{ durationUnit === 'min' ? 'min' : 's' }}
+                                </span>
+                            </div>
                         </div>
-                        <div class="relative flex-1">
-                            <input
-                                v-if="exercise.metric !== 'none'"
-                                type="number"
-                                inputmode="decimal"
-                                :value="modelValue.metricValue"
-                                @input="update({ metricValue: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
-                                :placeholder="metricLabel"
-                                class="w-full bg-surface border border-border rounded-xl px-2.5 py-2.5 pr-12 text-sm outline-none focus:border-primary-500 transition-colors"
-                            />
-                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-muted pointer-events-none">
-                                {{ exercise.metric === 'speed' ? 'km/h' : 'Stufe' }}
-                            </span>
+                        <div class="relative flex-1 flex" v-if="exercise.metric !== 'none'">
+                            <div class="flex items-center bg-surface border border-border rounded-xl px-2 text-sm text-center focus-within:border-primary-500 transition-colors">
+                                <button class="py-2.5 px-1" @click="update({ metricValue: modelValue.metricValue! - 1 })">
+                                    <IconMinus class="size-5" />
+                                </button>
+                                <input
+                                    inputmode="decimal"
+                                    :value="modelValue.metricValue"
+                                    @input="update({ metricValue: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
+                                    :placeholder="metricLabel"
+                                    class="w-full text-center outline-none disabled:cursor-not-allowed disabled:opacity-50 py-2.5"
+                                />
+                                <button @click="update({ metricValue: modelValue.metricValue! + 1 })" class="py-2.5 px-1">
+                                    <IconPlus class="size-5" />
+                                </button>
+                                <span class="ml-2 text-xs text-text-muted pointer-events-none whitespace-nowrap">
+                                    {{ exercise.metric === 'speed' ? 'km/h' : 'Stufe' }}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
