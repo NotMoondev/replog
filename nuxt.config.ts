@@ -16,7 +16,7 @@ function getAppVersion(): string {
     }
 }
 
-const appVersion = getAppVersion();
+const appVersion = getAppVersion()
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
@@ -80,25 +80,25 @@ export default defineNuxtConfig({
             ],
             icons: [
                 {
-                    src: 'icons/icon-192x192.png',
+                    src: 'icons/icon-192.png',
                     sizes: '192x192',
                     type: 'image/png',
                     purpose: 'any',
                 },
                 {
-                    src: 'icons/icon-512x512.png',
+                    src: 'icons/icon-512.png',
                     sizes: '512x512',
                     type: 'image/png',
                     purpose: 'any',
                 },
                 {
-                    src: 'icons/icon-192x192.png',
+                    src: 'icons/icon-192.png',
                     sizes: '192x192',
                     type: 'image/png',
                     purpose: 'maskable',
                 },
                 {
-                    src: 'icons/icon-512x512.png',
+                    src: 'icons/icon-512.png',
                     sizes: '512x512',
                     type: 'image/png',
                     purpose: 'maskable',
