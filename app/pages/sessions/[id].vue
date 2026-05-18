@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { toPng } from 'html-to-image'
 import { useSessionStore, computeVolume, computeRepsVolume, computeCardioScore, computeCardioDuration } from '~/stores/useSessionStore'
 import { useWorkoutStore } from '~/stores/useWorkoutStore'
 import type { WorkoutSessionExercise } from '~/types/session'
-import type { MuscleGroup } from '~/types/workout'
+import type { CardioExercise, MuscleGroup } from '~/types/workout'
 
 const route = useRoute()
 const sessionStore = useSessionStore()
@@ -209,6 +210,111 @@ const muscleGroupStats = computed(() => {
         .map(([group, score]) => ({ group, percent: Math.round(score / total * 100) }))
         .sort((a, b) => b.percent - a.percent)
 })
+
+// Share
+const shareCardRef = ref<HTMLElement | null>(null)
+const sharePreviewWrapper = ref<HTMLElement | null>(null)
+const showShareDrawer = ref(false)
+const downloading = ref(false)
+const cardScale = ref(1)
+
+const canShare = computed(() => typeof navigator !== 'undefined' && !!navigator.canShare)
+
+watch(showShareDrawer, async (open) => {
+    if (open) {
+        await nextTick()
+        // Drawer hat p-6 padding (24px × 2 = 48px); ShareCard ist 390px breit
+        cardScale.value = Math.min(1, (window.innerWidth - 48) / 390)
+    }
+})
+
+const shareSummaryExercises = computed(() => {
+    if (!session.value) return []
+    return session.value.exercises.slice(0, 8).map(ex => {
+        const name = exerciseName(ex)
+        let summary = ''
+        if (ex.sets && ex.sets.length > 0) {
+            const shown = ex.sets.slice(0, 3)
+            const more = ex.sets.length > 3 ? ` +${ex.sets.length - 3}` : ''
+            if (ex.strengthMode === 'time') {
+                summary = shown.map(s => formatDuration(s.duration ?? 0) ?? '—').join('/') + more
+            } else if (ex.strengthMode === 'reps') {
+                summary = shown.map(s => String(s.reps ?? 0)).join('/') + ' Reps' + more
+            } else {
+                const hasWeight = shown.some(s => (s.weight ?? 0) > 0)
+                if (hasWeight) {
+                    const allSameWeight = shown.every(s => s.weight === shown[0]!.weight)
+                    if (allSameWeight) {
+                        // e.g. "80 kg · 12/10/8"
+                        summary = `${shown[0]!.weight} kg · ${shown.map(s => s.reps ?? 0).join('/')}${more}`
+                    } else {
+                        // e.g. "80×12 / 75×10 / 70×8 kg"
+                        summary = shown.map(s => `${s.weight ?? 0}×${s.reps ?? 0}`).join(' / ') + ' kg' + more
+                    }
+                } else {
+                    summary = shown.map(s => String(s.reps ?? 0)).join('/') + ' Reps' + more
+                }
+            }
+        } else if (ex.duration) {
+            const dur = formatDuration(ex.duration) ?? '—'
+            if (ex.metricValue != null) {
+                const workoutEx = workout.value?.exercises.find(e => e.id === ex.exerciseId) as CardioExercise | undefined
+                const unit = workoutEx?.metric === 'speed' ? ' km/h' : ''
+                summary = `${dur} · ${ex.metricValue}${unit}`
+            } else {
+                summary = dur
+            }
+        }
+        return { name, summary, isPR: isNewPR(ex) }
+    })
+})
+
+const shareDate = computed(() => {
+    if (!session.value) return ''
+    return new Date(session.value.date).toLocaleDateString('de-DE', { day: '2-digit', month: 'short', year: 'numeric' })
+})
+
+const shareDuration = computed(() => {
+    return formatDuration(session.value?.durationSeconds) ?? undefined
+})
+
+function shareFilename(): string {
+    const name = (workout.value?.name ?? session.value?.workoutName ?? 'Workout')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9äöüß]+/gi, '-')
+        .replace(/^-+|-+$/g, '')
+    const date = session.value
+        ? new Date(session.value.date).toISOString().slice(0, 10)
+        : new Date().toISOString().slice(0, 10)
+    return `replog-${name}-${date}.png`
+}
+
+async function downloadShare() {
+    if (!shareCardRef.value) return
+    downloading.value = true
+    try {
+        await nextTick()
+        const dataUrl = await toPng(shareCardRef.value, { pixelRatio: 2, cacheBust: true, backgroundColor: '#0a0a0a' })
+        const blob = await (await fetch(dataUrl)).blob()
+        const filename = shareFilename()
+        const file = new File([blob], filename, { type: 'image/png' })
+        if (navigator.canShare?.({ files: [file] })) {
+            await navigator.share({ files: [file], title: `${workout.value?.name ?? 'Workout'} – REPLOG` })
+        } else {
+            const a = document.createElement('a')
+            a.href = dataUrl
+            a.download = filename
+            a.click()
+        }
+    } catch (e) {
+        if (e instanceof Error && e.name !== 'AbortError') {
+            useToast().addToast('Export fehlgeschlagen', 'error')
+        }
+    } finally {
+        downloading.value = false
+    }
+}
 </script>
 
 <template>
@@ -223,7 +329,7 @@ const muscleGroupStats = computed(() => {
                 <button @click="$router.back()" class="text-text-muted hover:text-text transition-colors shrink-0">
                     <IconChevronLeft class="size-6" />
                 </button>
-                <div class="min-w-0">
+                <div class="min-w-0 flex-1">
                     <h1 class="text-xl font-semibold truncate">{{ workout?.name ?? session.workoutName ?? 'Session' }}</h1>
                     <p class="text-sm text-text-muted flex items-center gap-2 flex-wrap">
                         <span>{{ formatDate(session.date) }}</span>
@@ -233,6 +339,13 @@ const muscleGroupStats = computed(() => {
                         </span>
                     </p>
                 </div>
+                <button
+                    @click="showShareDrawer = true"
+                    class="shrink-0 size-9 flex items-center justify-center rounded-xl bg-surface hover:bg-surface-hover border border-border transition-colors"
+                    title="Session teilen"
+                >
+                    <IconShare2 class="size-4" />
+                </button>
             </div>
 
             <!-- Weighted volume card -->
@@ -464,4 +577,35 @@ const muscleGroupStats = computed(() => {
             </div>
         </template>
     </div>
+
+    <!-- Share preview drawer -->
+    <BottomDrawer :open="showShareDrawer" @close="showShareDrawer = false">
+        <h3 class="text-base font-semibold">Session teilen</h3>
+
+        <!-- Vorschau: zoom skaliert zur Drawer-Breite; shareCardRef hat kein eigenes zoom → Capture immer in voller Auflösung -->
+        <div ref="sharePreviewWrapper" :style="{ zoom: cardScale }" class="rounded-2xl overflow-hidden">
+            <div ref="shareCardRef">
+                <ShareCard
+                    v-if="session"
+                    :workout-name="workout?.name ?? session.workoutName ?? 'Workout'"
+                    :date="shareDate"
+                    :duration="shareDuration"
+                    :exercises="shareSummaryExercises"
+                    :total-volume="currentVolume > 0 ? currentVolume : undefined"
+                    :total-reps="currentRepsVolume > 0 ? currentRepsVolume : undefined"
+                    :muscle-groups="muscleGroupStats"
+                />
+            </div>
+        </div>
+
+        <button
+            @click="downloadShare"
+            :disabled="downloading"
+            class="w-full flex items-center justify-center gap-2 h-12 rounded-2xl bg-primary-500 hover:bg-primary-600 text-white font-semibold transition-colors disabled:opacity-50"
+        >
+            <IconLoaderCircle v-if="downloading" class="size-4 animate-spin" />
+            <IconDownload v-else class="size-4" />
+            {{ canShare ? 'Teilen' : 'Herunterladen' }}
+        </button>
+    </BottomDrawer>
 </template>
