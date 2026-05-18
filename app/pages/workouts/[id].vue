@@ -17,6 +17,14 @@ const showModal = ref(false)
 const showPicker = ref(false)
 const editingExercise = ref<{ exercise: Exercise; index: number } | null>(null)
 const confirmingDelete = ref(false)
+const focusedIndex = ref<number | null>(null)
+
+async function handleMoveExercise(fromIndex: number, direction: 'up' | 'down') {
+    if (!workout.value) return
+    const toIndex = direction === 'up' ? fromIndex - 1 : fromIndex + 1
+    await store.moveExercise(workout.value.id, fromIndex, toIndex)
+    focusedIndex.value = toIndex
+}
 
 function handleStartWorkout() {
     if (!workout.value) return
@@ -133,13 +141,23 @@ async function handleDelete() {
 
             <!-- Exercises -->
             <div class="space-y-3">
-                <ExerciseCard
+                <div
                     v-for="(ex, index) in workout.exercises"
                     :key="ex.id"
-                    :exercise="ex"
-                    @edit="openEditExercise(ex, index)"
-                    @delete="handleDeleteExercise(ex.id)"
-                />
+                    :class="['relative', focusedIndex === index ? 'z-20' : '']"
+                >
+                    <ExerciseCard
+                        :exercise="ex"
+                        :focused="focusedIndex === index"
+                        :can-move-up="focusedIndex === index && index > 0"
+                        :can-move-down="focusedIndex === index && index < workout.exercises.length - 1"
+                        @edit="openEditExercise(ex, index)"
+                        @delete="handleDeleteExercise(ex.id)"
+                        @focus-request="focusedIndex = (focusedIndex === index ? null : index)"
+                        @move-up="handleMoveExercise(index, 'up')"
+                        @move-down="handleMoveExercise(index, 'down')"
+                    />
+                </div>
             </div>
 
             <!-- Empty exercises hint -->
@@ -211,6 +229,15 @@ async function handleDelete() {
             />
         </template>
     </div>
+
+    <!-- Focused exercise dismiss overlay -->
+    <Teleport to="body">
+        <div
+            v-if="focusedIndex !== null"
+            class="fixed inset-0 z-10"
+            @click="focusedIndex = null"
+        />
+    </Teleport>
 
     <!-- Session conflict dialog -->
     <Teleport to="body">

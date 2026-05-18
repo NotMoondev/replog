@@ -1,14 +1,28 @@
 <script setup lang="ts">
+import { onLongPress } from '@vueuse/core'
+
 defineProps<{
     exercise: any
+    focused?: boolean
+    canMoveUp?: boolean
+    canMoveDown?: boolean
 }>()
 
 const emit = defineEmits<{
     edit: []
     delete: []
+    'focus-request': []
+    'move-up': []
+    'move-down': []
 }>()
 
 const confirmingDelete = ref(false)
+const cardRef = ref<HTMLElement | null>(null)
+
+onLongPress(cardRef, () => {
+    navigator.vibrate?.(50)
+    emit('focus-request')
+}, { delay: 500 })
 
 function formatDuration(secs: number): string {
     if (secs >= 60 && secs % 60 === 0) return `${secs / 60} min`
@@ -18,7 +32,10 @@ function formatDuration(secs: number): string {
 </script>
 
 <template>
-    <div class="bg-card border border-border rounded-2xl p-4 space-y-3">
+    <div
+        ref="cardRef"
+        :class="['bg-card border rounded-2xl p-4 space-y-3 transition-colors select-none', focused ? 'border-primary-500' : 'border-border']"
+    >
         <!-- Header -->
         <div class="flex justify-between items-center gap-2">
             <h3 class="font-semibold text-sm truncate">{{ exercise.name }}</h3>
@@ -27,23 +44,45 @@ function formatDuration(secs: number): string {
                     :class="exercise.type === 'strength' ? 'bg-primary-500/20 text-primary-400' : 'bg-blue-500/20 text-blue-400'">
                     {{ exercise.type === 'strength' ? 'Kraft' : 'Cardio' }}
                 </span>
-                <button @click="emit('edit')" class="text-text-muted hover:text-primary-400 transition-colors">
-                    <IconPencil class="size-4" />
-                </button>
-                <template v-if="confirmingDelete">
+
+                <!-- Move buttons when focused -->
+                <template v-if="focused">
                     <button
-                        @click="emit('delete'); confirmingDelete = false"
-                        class="text-red-400 hover:text-red-300 text-xs font-medium transition px-1"
+                        @click.stop="emit('move-up')"
+                        :disabled="!canMoveUp"
+                        :class="['rounded-lg p-1 transition-colors', canMoveUp ? 'text-primary-400 hover:bg-surface active:bg-surface-hover' : 'text-text-muted/30 cursor-not-allowed']"
                     >
-                        Löschen
+                        <IconArrowUp class="size-4" />
                     </button>
-                    <button @click="confirmingDelete = false" class="text-text-muted hover:text-text transition">
-                        <IconX class="size-3.5" />
+                    <button
+                        @click.stop="emit('move-down')"
+                        :disabled="!canMoveDown"
+                        :class="['rounded-lg p-1 transition-colors', canMoveDown ? 'text-primary-400 hover:bg-surface active:bg-surface-hover' : 'text-text-muted/30 cursor-not-allowed']"
+                    >
+                        <IconArrowDown class="size-4" />
                     </button>
                 </template>
-                <button v-else @click="confirmingDelete = true" class="text-text-muted hover:text-red-400 transition-colors">
-                    <IconTrash2 class="size-4" />
-                </button>
+
+                <!-- Normal edit / delete buttons -->
+                <template v-else>
+                    <button @click="emit('edit')" class="text-text-muted hover:text-primary-400 transition-colors">
+                        <IconPencil class="size-4" />
+                    </button>
+                    <template v-if="confirmingDelete">
+                        <button
+                            @click="emit('delete'); confirmingDelete = false"
+                            class="text-red-400 hover:text-red-300 text-xs font-medium transition px-1"
+                        >
+                            Löschen
+                        </button>
+                        <button @click="confirmingDelete = false" class="text-text-muted hover:text-text transition">
+                            <IconX class="size-3.5" />
+                        </button>
+                    </template>
+                    <button v-else @click="confirmingDelete = true" class="text-text-muted hover:text-red-400 transition-colors">
+                        <IconTrash2 class="size-4" />
+                    </button>
+                </template>
             </div>
         </div>
 
