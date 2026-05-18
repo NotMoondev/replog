@@ -292,7 +292,7 @@ async function finish() {
                         duration: strengthMode === 'time' ? (s.duration ?? ex.sets[si]?.duration) : undefined,
                     })),
                 }
-                await workoutStore.updateExercise(workoutId.value, i, updatedEx)
+                await workoutStore.updateExercise(workoutId.value, i, updatedEx, true)
                 // Sync values back to preset library entry
                 if ((ex as any).presetId) {
                     await exerciseStore.updateExercise({ ...updatedEx, id: (ex as any).presetId }, true)
@@ -304,7 +304,7 @@ async function finish() {
                     duration: d.duration ?? ex.duration,
                     metricValue: d.metricValue ?? ex.metricValue,
                 }
-                await workoutStore.updateExercise(workoutId.value, i, updatedEx)
+                await workoutStore.updateExercise(workoutId.value, i, updatedEx, true)
                 // Sync values back to preset library entry
                 if ((ex as any).presetId) {
                     await exerciseStore.updateExercise({ ...updatedEx, id: (ex as any).presetId }, true)

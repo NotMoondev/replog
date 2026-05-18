@@ -43,12 +43,12 @@ export const useWorkoutStore = defineStore('workouts', {
             useToast().addToast('Übung hinzugefügt')
         },
 
-        async updateExercise(workoutId: string, exerciseIndex: number, updated: Exercise) {
+        async updateExercise(workoutId: string, exerciseIndex: number, updated: Exercise, silent = false) {
             const workout = this.workouts.find(w => w.id === workoutId)
             if (!workout) return
             workout.exercises[exerciseIndex] = updated
             await db.workouts.put(JSON.parse(JSON.stringify(toRaw(workout))))
-            useToast().addToast('Übung aktualisiert')
+            if (!silent) useToast().addToast('Übung aktualisiert')
         },
 
         async deleteExercise(workoutId: string, exerciseId: string) {

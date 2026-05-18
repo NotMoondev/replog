@@ -297,34 +297,34 @@ watch(() => props.modelValue.note, (val) => {
                         <!-- reps+weight: Reps + Weight -->
                         <template v-if="strengthMode === 'reps+weight'">
                             <div class="flex items-center bg-surface border border-border rounded-xl px-2 text-sm text-center focus-within:border-primary-500 transition-colors">
-                                <button class="py-2.5 px-1" @click="updateSet(i, { reps: set.reps! - 1 })">
+                                <button class="py-2.5 px-1" @click="updateSet(i, { reps: (set.reps ?? 0) - 1 })">
                                     <IconMinus class="size-5" />
                                 </button>
                                 <input
                                     inputmode="numeric"
                                     :value="set.reps"
                                     :placeholder="lastSet(i)?.reps != null ? String(lastSet(i)!.reps) : '—'"
-                                    @input="updateSet(i, { reps: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
+                                    @input="updateSet(i, { reps: Number(($event.target as HTMLInputElement).value) || undefined })"
                                     :disabled="set.completed"
                                     class="w-full text-center outline-none disabled:cursor-not-allowed disabled:opacity-50 py-2.5"
                                 />
-                                <button @click="updateSet(i, { reps: set.reps! + 1 })" class="py-2.5 px-1">
+                                <button @click="updateSet(i, { reps: (set.reps ?? 0) + 1 })" class="py-2.5 px-1">
                                     <IconPlus class="size-5" />
                                 </button>
                             </div>
                             <div class="flex items-center bg-surface border border-border rounded-xl px-2 text-sm text-center focus-within:border-primary-500 transition-colors">
-                                <button class="py-2.5 px-1" @click="updateSet(i, { reps: set.reps! - 1 })">
+                                <button class="py-2.5 px-1" @click="updateSet(i, { weight: (set.weight ?? 0) - 1 })">
                                     <IconMinus class="size-5" />
                                 </button>
                                 <input
                                     inputmode="decimal"
                                     :value="set.weight"
                                     :placeholder="lastSet(i)?.weight != null ? String(lastSet(i)!.weight) : '—'"
-                                    @input="updateSet(i, { weight: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
+                                    @input="updateSet(i, { weight: Number(($event.target as HTMLInputElement).value) || undefined })"
                                     :disabled="set.completed"
                                     class="w-full text-center outline-none disabled:cursor-not-allowed disabled:opacity-50 py-2.5"
                                 />
-                                <button @click="updateSet(i, { reps: set.reps! + 1 })" class="py-2.5 px-1">
+                                <button @click="updateSet(i, { weight: (set.weight ?? 0) + 1 })" class="py-2.5 px-1">
                                     <IconPlus class="size-5" />
                                 </button>
                             </div>
@@ -333,18 +333,18 @@ watch(() => props.modelValue.note, (val) => {
                         <!-- reps only -->
                         <template v-else-if="strengthMode === 'reps'">
                             <div class="flex items-center bg-surface border border-border rounded-xl px-2 text-sm text-center focus-within:border-primary-500 transition-colors">
-                                <button class="py-2.5 px-1" @click="updateSet(i, { reps: set.reps! - 1 })">
+                                <button class="py-2.5 px-1" @click="updateSet(i, { reps: (set.reps ?? 0) - 1 })">
                                     <IconMinus class="size-5" />
                                 </button>
                                 <input
                                     inputmode="numeric"
                                     :value="set.reps"
                                     :placeholder="lastSet(i)?.reps != null ? String(lastSet(i)!.reps) : '—'"
-                                    @input="updateSet(i, { reps: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
+                                    @input="updateSet(i, { reps: Number(($event.target as HTMLInputElement).value) || undefined })"
                                     :disabled="set.completed"
                                     class="w-full text-center outline-none disabled:cursor-not-allowed disabled:opacity-50 py-2.5"
                                 />
-                                <button @click="updateSet(i, { reps: set.reps! + 1 })" class="py-2.5 px-1">
+                                <button @click="updateSet(i, { reps: (set.reps ?? 0) + 1 })" class="py-2.5 px-1">
                                     <IconPlus class="size-5" />
                                 </button>
                             </div>
@@ -356,7 +356,7 @@ watch(() => props.modelValue.note, (val) => {
                                 <input
                                     inputmode="decimal"
                                     :value="getSetDurationDisplay(i)"
-                                    @input="setSetDuration(i, ($event.target as HTMLInputElement).valueAsNumber || undefined)"
+                                    @input="setSetDuration(i, Number(($event.target as HTMLInputElement).value) || undefined)"
                                     :placeholder="lastSet(i)?.duration != null
                                         ? String(timeDurationUnit === 'min' ? Math.round(lastSet(i)!.duration! / 60 * 100) / 100 : lastSet(i)!.duration)
                                         : '—'"
@@ -405,7 +405,7 @@ watch(() => props.modelValue.note, (val) => {
                                 <input
                                     inputmode="decimal"
                                     :value="durationDisplay"
-                                    @input="durationDisplay = ($event.target as HTMLInputElement).valueAsNumber || undefined"
+                                    @input="durationDisplay = Number(($event.target as HTMLInputElement).value) || undefined"
                                     :placeholder="durationUnit === 'min' ? 'Min' : 'Sek'"
                                     class="w-full text-center outline-none disabled:cursor-not-allowed disabled:opacity-50 py-2.5"
                                 />
@@ -425,7 +425,7 @@ watch(() => props.modelValue.note, (val) => {
                                 <input
                                     inputmode="decimal"
                                     :value="modelValue.metricValue"
-                                    @input="update({ metricValue: ($event.target as HTMLInputElement).valueAsNumber || undefined })"
+                                    @input="update({ metricValue: Number(($event.target as HTMLInputElement).value) || undefined })"
                                     :placeholder="metricLabel"
                                     class="w-full text-center outline-none disabled:cursor-not-allowed disabled:opacity-50 py-2.5"
                                 />
