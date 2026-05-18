@@ -17,6 +17,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dexie": "^4.3.0",
+    "html-to-image": "^1.11.13",
     "lucide-vue-next": "^1.0.0",
     "nuxt": "^4.4.2",
     "nuxt-lucide-icons": "2.0.0",
@@ -36,5 +37,8 @@
   "devDependencies": {
     "@vite-pwa/nuxt": "^1.1.1",
     "sharp": "^0.34.5"
+  },
+  "overrides": {
+    "rollup": "4.59.0"
   }
 }
