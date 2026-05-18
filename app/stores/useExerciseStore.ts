@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
-import { toRaw } from 'vue'
 import { db } from '~/utils/db'
+import { serialize } from '~/utils/serialize'
 import type { Exercise } from '~/types/workout'
 
 export const useExerciseStore = defineStore('exercises', {
@@ -17,17 +17,17 @@ export const useExerciseStore = defineStore('exercises', {
         },
 
         async createExercise(exercise: Exercise) {
-            const raw: Exercise = JSON.parse(JSON.stringify(toRaw(exercise)))
+            const raw: Exercise = serialize(exercise)
             await db.exercises.add(raw)
             this.exercises.push(raw)
             useToast().addToast(`"${raw.name}" erstellt`)
         },
 
         async updateExercise(exercise: Exercise, silent = false) {
-            const raw: Exercise = JSON.parse(JSON.stringify(toRaw(exercise)))
+            const raw: Exercise = serialize(exercise)
             const index = this.exercises.findIndex(e => e.id === exercise.id)
             if (index === -1) {
-                // Not in memory yet (loadExercises not called) — use put() to safely upsert
+                // Not in memory yet (loadExercises not called), use put() to safely upsert
                 this.exercises.push(raw)
                 await db.exercises.put(raw)
             } else {

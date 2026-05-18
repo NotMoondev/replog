@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
-import { toRaw } from 'vue'
 import { db } from '~/utils/db'
+import { serialize } from '~/utils/serialize'
 import { exportPlan, importPlan as importPlanFile } from '~/utils/exportImport'
 import { useWorkoutStore } from '~/stores/useWorkoutStore'
 import type { TrainingPlan, TrainingDay } from '~/types/trainingPlan'
@@ -69,7 +69,7 @@ export const useTrainingPlanStore = defineStore('trainingPlans', {
         async setActivePlan(id: string) {
             for (const plan of this.plans) {
                 plan.isActive = plan.id === id
-                await db.trainingPlans.put(JSON.parse(JSON.stringify(toRaw(plan))))
+                await db.trainingPlans.put(serialize(plan))
             }
             const activated = this.plans.find(p => p.id === id)
             if (activated) useToast().addToast(`"${activated.name}" aktiviert`)
@@ -82,14 +82,14 @@ export const useTrainingPlanStore = defineStore('trainingPlans', {
             if (day) {
                 Object.assign(day, data)
             }
-            await db.trainingPlans.put(JSON.parse(JSON.stringify(toRaw(plan))))
+            await db.trainingPlans.put(serialize(plan))
         },
 
         async renamePlan(id: string, name: string) {
             const plan = this.plans.find(p => p.id === id)
             if (!plan) return
             plan.name = name
-            await db.trainingPlans.put(JSON.parse(JSON.stringify(toRaw(plan))))
+            await db.trainingPlans.put(serialize(plan))
             useToast().addToast('Plan umbenannt')
         },
 
@@ -98,8 +98,8 @@ export const useTrainingPlanStore = defineStore('trainingPlans', {
             if (!plan) return
             const workoutStore = useWorkoutStore()
             exportPlan(
-                JSON.parse(JSON.stringify(toRaw(plan))),
-                JSON.parse(JSON.stringify(toRaw(workoutStore.workouts))),
+                serialize(plan),
+                serialize(workoutStore.workouts),
             )
         },
 

@@ -9,6 +9,7 @@ const editingExercise = ref<Exercise | null>(null)
 const confirmingDeleteId = ref<string | null>(null)
 const searchQuery = ref('')
 const activeTab = ref<'mine' | 'presets'>('mine')
+const { formatSetDuration } = useFormatters()
 
 // Map of preset IDs that the user has customised and saved to the store
 const presetOverrides = computed(() =>
@@ -115,7 +116,7 @@ async function handleDelete(id: string) {
                                 <span class="text-text-muted">{{ i + 1 }}</span>
                                 <!-- time mode -->
                                 <template v-if="ex.mode === 'time'">
-                                    <span class="font-medium">{{ set.duration != null ? formatDuration(set.duration) :
+                                    <span class="font-medium">{{ set.duration != null ? formatSetDuration(set.duration) :
                                         '—' }}</span>
                                 </template>
                                 <!-- reps or reps+weight -->
@@ -134,7 +135,7 @@ async function handleDelete(id: string) {
                         <div v-if="ex.type === 'cardio'" class="flex flex-wrap gap-1.5">
                             <div class="flex items-center gap-1.5 bg-surface rounded-lg px-2.5 py-1 text-xs">
                                 <IconTimer class="w-3 h-3 text-blue-400" />
-                                <span class="font-medium">{{ formatDuration(ex.duration) }}</span>
+                                <span class="font-medium">{{ formatSetDuration(ex.duration) }}</span>
                             </div>
                             <div v-if="ex.metric !== 'none' && ex.metricValue != null"
                                 class="flex items-center gap-1.5 bg-surface rounded-lg px-2.5 py-1 text-xs">

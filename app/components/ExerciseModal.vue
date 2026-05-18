@@ -11,6 +11,7 @@ const props = defineProps<{
 
 import type { Exercise, StrengthMode, MuscleGroup } from '~/types/workout'
 import { ALL_MUSCLE_GROUPS } from '~/types/workout'
+import { secondsToDisplay, displayToSeconds, autoUnit } from '~/utils/duration'
 
 const emit = defineEmits<{
     close: []
@@ -50,16 +51,11 @@ const sets = ref<Array<{ reps?: number; weight?: number; duration?: number }>>([
 const timeDurationUnit = ref<'s' | 'min'>('s')
 
 function getSetDurationDisplay(i: number): number | undefined {
-    const v = sets.value[i]?.duration
-    if (v == null) return undefined
-    return timeDurationUnit.value === 'min' ? Math.round(v / 60 * 100) / 100 : v
+    return secondsToDisplay(sets.value[i]?.duration, timeDurationUnit.value)
 }
 
 function setSetDuration(i: number, val: number | undefined) {
-    const secs = val == null || isNaN(val as number)
-        ? undefined
-        : timeDurationUnit.value === 'min' ? Math.round((val as number) * 60) : (val as number)
-    sets.value[i]!.duration = secs
+    sets.value[i]!.duration = displayToSeconds(val, timeDurationUnit.value)
 }
 
 /* Cardio */
@@ -70,19 +66,8 @@ const metricValue = ref<number | undefined>()
 
 // Displayed value in the chosen unit
 const durationDisplay = computed({
-    get(): number | undefined {
-        if (duration.value == null) return undefined
-        return durationUnit.value === 'min'
-            ? Math.round(duration.value / 60 * 100) / 100
-            : duration.value
-    },
-    set(val: number | undefined) {
-        if (val == null || isNaN(val as number)) {
-            duration.value = undefined
-        } else {
-            duration.value = durationUnit.value === 'min' ? Math.round((val as number) * 60) : (val as number)
-        }
-    },
+    get: () => secondsToDisplay(duration.value, durationUnit.value),
+    set: (val: number | undefined) => { duration.value = displayToSeconds(val, durationUnit.value) },
 })
 
 function switchDurationUnit(unit: 's' | 'min') {
@@ -111,16 +96,12 @@ onMounted(() => {
             // Auto-select unit for time mode
             if (m === 'time') {
                 const firstDur = props.initialExercise.sets[0]?.duration ?? 0
-                timeDurationUnit.value = firstDur >= 60 && firstDur % 60 === 0 ? 'min' : 's'
+                timeDurationUnit.value = autoUnit(firstDur)
             }
         } else {
             mode.value = 'cardio'
             const secs: number = props.initialExercise.duration ?? 0
-            if (secs >= 60 && secs % 60 === 0) {
-                durationUnit.value = 'min'
-            } else {
-                durationUnit.value = 's'
-            }
+            durationUnit.value = autoUnit(secs)
             duration.value = secs
             metric.value = props.initialExercise.metric ?? 'none'
             metricValue.value = props.initialExercise.metricValue

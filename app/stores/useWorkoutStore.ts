@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
-import { toRaw } from 'vue'
 import { db } from '~/utils/db'
+import { serialize } from '~/utils/serialize'
 import type { Workout, Exercise } from '~/types/workout'
 
 export const useWorkoutStore = defineStore('workouts', {
@@ -39,7 +39,7 @@ export const useWorkoutStore = defineStore('workouts', {
             const workout = this.workouts.find(w => w.id === workoutId)
             if (!workout) return
             workout.exercises.push(exercise)
-            await db.workouts.put(JSON.parse(JSON.stringify(toRaw(workout))))
+            await db.workouts.put(serialize(workout))
             useToast().addToast('Übung hinzugefügt')
         },
 
@@ -47,7 +47,7 @@ export const useWorkoutStore = defineStore('workouts', {
             const workout = this.workouts.find(w => w.id === workoutId)
             if (!workout) return
             workout.exercises[exerciseIndex] = updated
-            await db.workouts.put(JSON.parse(JSON.stringify(toRaw(workout))))
+            await db.workouts.put(serialize(workout))
             if (!silent) useToast().addToast('Übung aktualisiert')
         },
 
@@ -55,7 +55,7 @@ export const useWorkoutStore = defineStore('workouts', {
             const workout = this.workouts.find(w => w.id === workoutId)
             if (!workout) return
             workout.exercises = workout.exercises.filter(e => e.id !== exerciseId)
-            await db.workouts.put(JSON.parse(JSON.stringify(toRaw(workout))))
+            await db.workouts.put(serialize(workout))
             useToast().addToast('Übung gelöscht', 'info')
         },
 
@@ -63,7 +63,7 @@ export const useWorkoutStore = defineStore('workouts', {
             const workout = this.workouts.find(w => w.id === id)
             if (!workout) return
             workout.name = name
-            await db.workouts.put(JSON.parse(JSON.stringify(toRaw(workout))))
+            await db.workouts.put(serialize(workout))
             useToast().addToast('Workout umbenannt')
         },
 
@@ -74,13 +74,13 @@ export const useWorkoutStore = defineStore('workouts', {
             const exercises = workout.exercises
             const [moved] = exercises.splice(fromIndex, 1)
             exercises.splice(toIndex, 0, moved)
-            await db.workouts.put(JSON.parse(JSON.stringify(toRaw(workout))))
+            await db.workouts.put(serialize(workout))
         },
 
         async cloneWorkout(id: string) {
             const original = this.workouts.find(w => w.id === id)
             if (!original) return
-            const clone: Workout = JSON.parse(JSON.stringify(toRaw(original)))
+            const clone: Workout = serialize(original)
             clone.id = crypto.randomUUID()
             clone.name = `${original.name} (Kopie)`
             clone.createdAt = new Date().toISOString()

@@ -2,14 +2,17 @@
 import { ref, computed, onMounted } from 'vue'
 import { useWorkoutStore } from '~/stores/useWorkoutStore'
 import { useTrainingPlanStore } from '~/stores/useTrainingPlanStore'
-import { useSessionStore, computeVolume } from '~/stores/useSessionStore'
+import { useSessionStore } from '~/stores/useSessionStore'
+import { computeVolume } from '~/utils/metrics'
 import { useActiveSession } from '~/composables/useActiveSession'
+import { useFormatters } from '~/composables/useFormatters'
 
 const store = useWorkoutStore()
 const planStore = useTrainingPlanStore()
 const sessionStore = useSessionStore()
 const activeSession = useActiveSession()
 const { showConflict, navigateTo, confirmDiscard, confirmResume, cancel: cancelConflict } = activeSession.useConflictGuard()
+const { formatSessionDate, formatVolume } = useFormatters()
 
 const WEEKDAYS_SHORT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 
@@ -86,20 +89,6 @@ function workoutName(workoutId: string): string {
     return store.workouts.find(w => w.id === workoutId)?.name ?? 'Workout'
 }
 
-function formatSessionDate(iso: string): string {
-    const date = new Date(iso)
-    const now = new Date()
-    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
-    if (diffDays === 0) return 'Heute'
-    if (diffDays === 1) return 'Gestern'
-    if (diffDays < 7) return `vor ${diffDays} Tagen`
-    return date.toLocaleDateString('de-DE', { day: '2-digit', month: 'short' })
-}
-
-function formatVolume(kg: number): string {
-    if (kg >= 1000) return `${(kg / 1000).toFixed(1).replace('.', ',')} t`
-    return `${kg.toLocaleString('de-DE')} kg`
-}
 
 onMounted(async () => {
     await Promise.all([
@@ -161,7 +150,7 @@ onMounted(async () => {
 
             <div v-else-if="planStore.todayIsRestDay" class="flex items-center gap-2 text-text-muted">
                 <IconBedDouble class="size-4" />
-                <span class="text-sm">Ruhetag — erhole dich gut!</span>
+                <span class="text-sm">Ruhetag, erhole dich gut!</span>
             </div>
 
             <div v-else-if="todayWorkout" class="space-y-3">
@@ -178,7 +167,7 @@ onMounted(async () => {
             </div>
 
             <div v-else class="text-sm text-text-muted">
-                Kein Workout für heute eingetragen. —
+                Kein Workout für heute eingetragen.
                 <NuxtLink to="/plan" class="text-primary-400 hover:text-primary-300 transition-colors">Plan bearbeiten</NuxtLink>
             </div>
         </div>
@@ -291,39 +280,10 @@ onMounted(async () => {
         </div>
     </div>
 
-    <!-- Session conflict dialog -->
-    <Teleport to="body">
-        <Transition
-            enter-active-class="transition duration-200 ease-out"
-            enter-from-class="opacity-0"
-            enter-to-class="opacity-100"
-            leave-active-class="transition duration-150 ease-in"
-            leave-from-class="opacity-100"
-            leave-to-class="opacity-0"
-        >
-            <div v-if="showConflict" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-                <Transition
-                    appear
-                    enter-active-class="transition duration-200 ease-out"
-                    enter-from-class="opacity-0 scale-95"
-                    enter-to-class="opacity-100 scale-100"
-                >
-                    <div class="bg-card border border-border rounded-2xl p-6 space-y-4 max-w-sm w-full">
-                        <h3 class="font-semibold text-lg text-text">Session läuft noch</h3>
-                        <p class="text-sm text-text-muted">
-                            Du hast noch eine aktive Session für
-                            <span class="font-semibold text-text">„{{ activeSession.meta.value?.workoutName }}"</span>.
-                            Was möchtest du tun?
-                        </p>
-                        <div class="flex flex-col gap-2">
-                            <button @click="confirmResume" class="w-full bg-primary-500 hover:bg-primary-600 text-white rounded-xl py-2.5 font-semibold text-sm transition-colors">Aktive Session fortsetzen</button>
-                            <button @click="confirmDiscard" class="w-full bg-surface hover:bg-surface-hover border border-border text-text rounded-xl py-2.5 font-semibold text-sm transition-colors">Session verwerfen &amp; neu starten</button>
-                            <button @click="cancelConflict" class="w-full text-text-muted hover:text-text text-sm py-1.5 transition-colors">Abbrechen</button>
-                        </div>
-                    </div>
-                </Transition>
-            </div>
-        </Transition>
-    </Teleport>
+    <SessionConflictDialog
+        :show="showConflict"
+        @resume="confirmResume"
+        @discard="confirmDiscard"
+        @cancel="cancelConflict"
+    />
 </template>
-

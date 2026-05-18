@@ -1,5 +1,10 @@
 import type { Exercise } from '~/types/workout'
 
+/** Create `count` copies of the same set object (used to DRY up preset definitions). */
+function rs<T extends object>(count: number, set: T): T[] {
+    return Array.from({ length: count }, () => ({ ...set }))
+}
+
 /**
  * Built-in exercise templates provided by the app.
  * These are never stored in IndexedDB and are excluded from all user data exports.
@@ -12,7 +17,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Bankdrücken',
         mode: 'reps+weight',
-        sets: [{ reps: 8, weight: 60 }, { reps: 8, weight: 60 }, { reps: 8, weight: 60 }],
+        sets: rs(3, { reps: 8, weight: 60 }),
         muscleGroups: ['Brust', 'Trizeps', 'Schultern'],
     },
     {
@@ -20,7 +25,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Schrägbankdrücken',
         mode: 'reps+weight',
-        sets: [{ reps: 10, weight: 50 }, { reps: 10, weight: 50 }, { reps: 10, weight: 50 }],
+        sets: rs(3, { reps: 10, weight: 50 }),
         muscleGroups: ['Brust', 'Trizeps', 'Schultern'],
     },
     {
@@ -28,7 +33,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Butterfly',
         mode: 'reps+weight',
-        sets: [{ reps: 12, weight: 40 }, { reps: 12, weight: 40 }, { reps: 12, weight: 40 }],
+        sets: rs(3, { reps: 12, weight: 40 }),
         muscleGroups: ['Brust'],
     },
     {
@@ -36,7 +41,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Liegestütze',
         mode: 'reps',
-        sets: [{ reps: 15 }, { reps: 15 }, { reps: 15 }],
+        sets: rs(3, { reps: 15 }),
         muscleGroups: ['Brust', 'Trizeps', 'Schultern'],
     },
     {
@@ -44,7 +49,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Dips',
         mode: 'reps',
-        sets: [{ reps: 10 }, { reps: 10 }, { reps: 10 }],
+        sets: rs(3, { reps: 10 }),
         muscleGroups: ['Brust', 'Trizeps'],
     },
 
@@ -54,7 +59,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Kreuzheben',
         mode: 'reps+weight',
-        sets: [{ reps: 5, weight: 100 }, { reps: 5, weight: 100 }, { reps: 5, weight: 100 }],
+        sets: rs(3, { reps: 5, weight: 100 }),
         muscleGroups: ['Rücken', 'Gesäß', 'Beinbeuger'],
     },
     {
@@ -62,7 +67,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Klimmzüge',
         mode: 'reps',
-        sets: [{ reps: 8 }, { reps: 8 }, { reps: 8 }],
+        sets: rs(3, { reps: 8 }),
         muscleGroups: ['Rücken', 'Bizeps'],
     },
     {
@@ -70,7 +75,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Latzug',
         mode: 'reps+weight',
-        sets: [{ reps: 10, weight: 60 }, { reps: 10, weight: 60 }, { reps: 10, weight: 60 }],
+        sets: rs(3, { reps: 10, weight: 60 }),
         muscleGroups: ['Rücken', 'Bizeps'],
     },
     {
@@ -78,7 +83,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Kabelrudern',
         mode: 'reps+weight',
-        sets: [{ reps: 12, weight: 50 }, { reps: 12, weight: 50 }, { reps: 12, weight: 50 }],
+        sets: rs(3, { reps: 12, weight: 50 }),
         muscleGroups: ['Rücken', 'Bizeps'],
     },
     {
@@ -86,7 +91,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Kurzhantelrudern',
         mode: 'reps+weight',
-        sets: [{ reps: 10, weight: 30 }, { reps: 10, weight: 30 }, { reps: 10, weight: 30 }],
+        sets: rs(3, { reps: 10, weight: 30 }),
         muscleGroups: ['Rücken', 'Bizeps'],
     },
     {
@@ -94,7 +99,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Face Pulls',
         mode: 'reps+weight',
-        sets: [{ reps: 15, weight: 20 }, { reps: 15, weight: 20 }, { reps: 15, weight: 20 }],
+        sets: rs(3, { reps: 15, weight: 20 }),
         muscleGroups: ['Schultern', 'Rücken'],
     },
 
@@ -104,7 +109,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Kniebeugen',
         mode: 'reps+weight',
-        sets: [{ reps: 8, weight: 80 }, { reps: 8, weight: 80 }, { reps: 8, weight: 80 }, { reps: 8, weight: 80 }],
+        sets: rs(4, { reps: 8, weight: 80 }),
         muscleGroups: ['Quadrizeps', 'Gesäß', 'Beinbeuger'],
     },
     {
@@ -112,7 +117,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Beinpresse',
         mode: 'reps+weight',
-        sets: [{ reps: 10, weight: 120 }, { reps: 10, weight: 120 }, { reps: 10, weight: 120 }],
+        sets: rs(3, { reps: 10, weight: 120 }),
         muscleGroups: ['Quadrizeps', 'Gesäß'],
     },
     {
@@ -120,7 +125,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Beinstrecken',
         mode: 'reps+weight',
-        sets: [{ reps: 12, weight: 50 }, { reps: 12, weight: 50 }, { reps: 12, weight: 50 }],
+        sets: rs(3, { reps: 12, weight: 50 }),
         muscleGroups: ['Quadrizeps'],
     },
     {
@@ -128,7 +133,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Beinbeugen',
         mode: 'reps+weight',
-        sets: [{ reps: 12, weight: 40 }, { reps: 12, weight: 40 }, { reps: 12, weight: 40 }],
+        sets: rs(3, { reps: 12, weight: 40 }),
         muscleGroups: ['Beinbeuger'],
     },
     {
@@ -136,7 +141,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Rumänisches Kreuzheben',
         mode: 'reps+weight',
-        sets: [{ reps: 10, weight: 70 }, { reps: 10, weight: 70 }, { reps: 10, weight: 70 }],
+        sets: rs(3, { reps: 10, weight: 70 }),
         muscleGroups: ['Beinbeuger', 'Gesäß', 'Rücken'],
     },
     {
@@ -144,7 +149,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Ausfallschritte',
         mode: 'reps+weight',
-        sets: [{ reps: 12, weight: 20 }, { reps: 12, weight: 20 }, { reps: 12, weight: 20 }],
+        sets: rs(3, { reps: 12, weight: 20 }),
         muscleGroups: ['Quadrizeps', 'Gesäß', 'Beinbeuger'],
     },
     {
@@ -152,7 +157,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Goblet Squat',
         mode: 'reps+weight',
-        sets: [{ reps: 12, weight: 24 }, { reps: 12, weight: 24 }, { reps: 12, weight: 24 }],
+        sets: rs(3, { reps: 12, weight: 24 }),
         muscleGroups: ['Quadrizeps', 'Gesäß'],
     },
     {
@@ -160,7 +165,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Hip Thrust',
         mode: 'reps+weight',
-        sets: [{ reps: 10, weight: 80 }, { reps: 10, weight: 80 }, { reps: 10, weight: 80 }],
+        sets: rs(3, { reps: 10, weight: 80 }),
         muscleGroups: ['Gesäß', 'Beinbeuger'],
     },
     {
@@ -168,7 +173,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Wadenheben',
         mode: 'reps+weight',
-        sets: [{ reps: 15, weight: 60 }, { reps: 15, weight: 60 }, { reps: 15, weight: 60 }],
+        sets: rs(3, { reps: 15, weight: 60 }),
         muscleGroups: ['Waden'],
     },
 
@@ -178,7 +183,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Schulterdrücken',
         mode: 'reps+weight',
-        sets: [{ reps: 10, weight: 40 }, { reps: 10, weight: 40 }, { reps: 10, weight: 40 }],
+        sets: rs(3, { reps: 10, weight: 40 }),
         muscleGroups: ['Schultern', 'Trizeps'],
     },
     {
@@ -186,7 +191,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Seitheben',
         mode: 'reps+weight',
-        sets: [{ reps: 12, weight: 10 }, { reps: 12, weight: 10 }, { reps: 12, weight: 10 }],
+        sets: rs(3, { reps: 12, weight: 10 }),
         muscleGroups: ['Schultern'],
     },
     {
@@ -194,7 +199,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Frontheben',
         mode: 'reps+weight',
-        sets: [{ reps: 12, weight: 10 }, { reps: 12, weight: 10 }, { reps: 12, weight: 10 }],
+        sets: rs(3, { reps: 12, weight: 10 }),
         muscleGroups: ['Schultern'],
     },
 
@@ -204,7 +209,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Bizeps Curl',
         mode: 'reps+weight',
-        sets: [{ reps: 12, weight: 15 }, { reps: 12, weight: 15 }, { reps: 12, weight: 15 }],
+        sets: rs(3, { reps: 12, weight: 15 }),
         muscleGroups: ['Bizeps'],
     },
     {
@@ -212,7 +217,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Hammer Curls',
         mode: 'reps+weight',
-        sets: [{ reps: 12, weight: 14 }, { reps: 12, weight: 14 }, { reps: 12, weight: 14 }],
+        sets: rs(3, { reps: 12, weight: 14 }),
         muscleGroups: ['Bizeps'],
     },
     {
@@ -220,7 +225,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Trizepsdrücken',
         mode: 'reps+weight',
-        sets: [{ reps: 12, weight: 30 }, { reps: 12, weight: 30 }, { reps: 12, weight: 30 }],
+        sets: rs(3, { reps: 12, weight: 30 }),
         muscleGroups: ['Trizeps'],
     },
     {
@@ -228,7 +233,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Trizeps Overhead Extension',
         mode: 'reps+weight',
-        sets: [{ reps: 12, weight: 20 }, { reps: 12, weight: 20 }, { reps: 12, weight: 20 }],
+        sets: rs(3, { reps: 12, weight: 20 }),
         muscleGroups: ['Trizeps'],
     },
 
@@ -238,7 +243,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Sit-Ups',
         mode: 'reps',
-        sets: [{ reps: 20 }, { reps: 20 }, { reps: 20 }],
+        sets: rs(3, { reps: 20 }),
         muscleGroups: ['Bauch'],
     },
     {
@@ -246,7 +251,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Plank',
         mode: 'time',
-        sets: [{ duration: 60 }, { duration: 60 }, { duration: 60 }],
+        sets: rs(3, { duration: 60 }),
         muscleGroups: ['Bauch'],
     },
     {
@@ -254,7 +259,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Russian Twist',
         mode: 'reps',
-        sets: [{ reps: 20 }, { reps: 20 }, { reps: 20 }],
+        sets: rs(3, { reps: 20 }),
         muscleGroups: ['Bauch'],
     },
     {
@@ -262,7 +267,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Beinheben (liegend)',
         mode: 'reps',
-        sets: [{ reps: 15 }, { reps: 15 }, { reps: 15 }],
+        sets: rs(3, { reps: 15 }),
         muscleGroups: ['Bauch'],
     },
     {
@@ -270,7 +275,7 @@ export const PRESET_EXERCISES: Exercise[] = [
         type: 'strength',
         name: 'Kabelzug Bauch',
         mode: 'reps+weight',
-        sets: [{ reps: 15, weight: 20 }, { reps: 15, weight: 20 }, { reps: 15, weight: 20 }],
+        sets: rs(3, { reps: 15, weight: 20 }),
         muscleGroups: ['Bauch'],
     },
 

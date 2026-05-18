@@ -17,6 +17,7 @@ const emit = defineEmits<{
 
 const exerciseStore = useExerciseStore()
 const workoutStore = useWorkoutStore()
+const { formatExerciseDuration, formatMetric } = useFormatters()
 
 const searchQuery = ref('')
 const showCreateModal = ref(false)
@@ -64,22 +65,6 @@ function onExerciseCreated(exercise: Exercise) {
 function onCreateModalClose() {
     showCreateModal.value = false
     if (!props.sessionMode) emit('close')
-}
-
-function formatDuration(seconds: number): string {
-    if (seconds <= 0) return '0 s'
-    const h = Math.floor(seconds / 3600)
-    const m = Math.floor((seconds % 3600) / 60)
-    const s = seconds % 60
-    if (h > 0) return m > 0 ? `${h} h ${m} min` : `${h} h`
-    if (m > 0) return s > 0 ? `${m} min ${s} s` : `${m} min`
-    return `${s} s`
-}
-
-function formatMetric(metric: string, value: number | undefined): string {
-    if (metric === 'speed' && value != null) return `${value} km/h`
-    if (metric === 'intensity' && value != null) return `Stufe ${value}`
-    return ''
 }
 </script>
 
@@ -149,7 +134,7 @@ function formatMetric(metric: string, value: number | undefined): string {
 
             <hr class="border-border mx-5 shrink-0" />
 
-            <!-- Exercise list — fills remaining drawer height -->
+            <!-- Exercise list, fills remaining drawer height -->
             <!-- data-vaul-no-drag prevents vaul from interpreting scroll as a snap-point drag -->
             <div data-vaul-no-drag class="flex-1 min-h-0 overflow-y-auto px-5 py-3">
                 <div class="space-y-2">
@@ -172,7 +157,7 @@ function formatMetric(metric: string, value: number | undefined): string {
                                 <template v-if="ex.sets[0]?.weight"> · {{ ex.sets[0].weight }} kg</template>
                             </p>
                             <p v-else class="text-xs text-text-muted mt-0.5">
-                                {{ formatDuration(ex.duration) }}<template v-if="formatMetric(ex.metric, ex.metricValue)"> · {{ formatMetric(ex.metric, ex.metricValue) }}</template>
+                                {{ formatExerciseDuration(ex.duration) }}<template v-if="formatMetric(ex.metric, ex.metricValue)"> · {{ formatMetric(ex.metric, ex.metricValue) }}</template>
                             </p>
                             <div v-if="ex.muscleGroups?.length" class="flex flex-wrap gap-1 mt-1.5">
                                 <span

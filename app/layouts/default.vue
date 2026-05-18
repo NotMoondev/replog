@@ -6,14 +6,18 @@ const router = useRouter()
 const route = useRoute()
 const activeSession = useActiveSession()
 
+const ROUTE_TITLES: Record<string, string> = {
+    '/exercises': 'Übungen',
+    '/workouts': 'Workouts',
+    '/plan': 'Trainingsplan',
+    '/stats': 'Statistiken',
+    '/session': 'Training',
+    '/settings': 'Einstellungen',
+}
+
 const routeTitle = computed(() => {
-    if (route.path.startsWith('/exercises')) return 'Übungen'
-    if (route.path.startsWith('/workouts')) return 'Workouts'
-    if (route.path.startsWith('/plan')) return 'Trainingsplan'
-    if (route.path.startsWith('/stats')) return 'Statistiken'
-    if (route.path.startsWith('/session')) return 'Training'
-    if (route.path.startsWith('/settings')) return 'Einstellungen'
-    return 'Start'
+    const match = Object.entries(ROUTE_TITLES).find(([prefix]) => route.path.startsWith(prefix))
+    return match ? match[1] : 'Start'
 })
 
 const isSession = computed(() => route.path.startsWith('/session'))

@@ -19,16 +19,12 @@ const emit = defineEmits<{
 const confirmingDelete = ref(false)
 const cardRef = ref<HTMLElement | null>(null)
 
+const { formatSetDuration, formatExerciseDuration } = useFormatters()
+
 onLongPress(cardRef, () => {
     navigator.vibrate?.(50)
     emit('focus-request')
 }, { delay: 500 })
-
-function formatDuration(secs: number): string {
-    if (secs >= 60 && secs % 60 === 0) return `${secs / 60} min`
-    if (secs >= 60) return `${(secs / 60).toFixed(1)} min`
-    return `${secs} s`
-}
 </script>
 
 <template>
@@ -93,7 +89,7 @@ function formatDuration(secs: number): string {
                 <span class="text-text-muted text-xs bg-surface-hover rounded-lg px-2 py-1">{{ Number(i) + 1 }}</span>
                 <!-- time mode -->
                 <template v-if="exercise.mode === 'time'">
-                    <span class="font-medium">{{ set.duration != null ? formatDuration(set.duration) : '—' }}</span>
+                    <span class="font-medium">{{ set.duration != null ? formatSetDuration(set.duration) : '—' }}</span>
                 </template>
                 <!-- reps or reps+weight -->
                 <template v-else>
@@ -110,7 +106,7 @@ function formatDuration(secs: number): string {
         <div v-if="exercise.type === 'cardio'" class="flex flex-wrap gap-2">
             <div class="flex items-center gap-1.5 bg-surface rounded-lg px-3 py-1.5 text-sm">
                 <IconTimer class="w-3.5 h-3.5 text-blue-400" />
-                <span class="font-medium">{{ formatDuration(exercise.duration) }}</span>
+                <span class="font-medium">{{ formatExerciseDuration(exercise.duration) }}</span>
             </div>
             <div v-if="exercise.metric && exercise.metric !== 'none' && exercise.metricValue != null"
                 class="flex items-center gap-1.5 bg-surface rounded-lg px-3 py-1.5 text-sm">

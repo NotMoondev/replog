@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { toPng } from 'html-to-image'
-import { useSessionStore, computeVolume, computeRepsVolume, computeCardioScore, computeCardioDuration } from '~/stores/useSessionStore'
+import { useSessionStore } from '~/stores/useSessionStore'
+import { computeVolume, computeRepsVolume, computeCardioScore, computeCardioDuration } from '~/utils/metrics'
 import { useWorkoutStore } from '~/stores/useWorkoutStore'
 import type { WorkoutSessionExercise } from '~/types/session'
 import type { CardioExercise, MuscleGroup } from '~/types/workout'
@@ -166,17 +167,17 @@ function formatDuration(seconds?: number): string | null {
 
 // Muscle group breakdown
 const MUSCLE_GROUP_COLORS: Record<string, string> = {
-    'Brust':       'bg-rose-500',
-    'Rücken':      'bg-sky-500',
-    'Schultern':   'bg-violet-500',
-    'Bizeps':      'bg-amber-500',
-    'Trizeps':     'bg-orange-500',
-    'Bauch':       'bg-yellow-500',
-    'Quadrizeps':  'bg-emerald-500',
-    'Beinbeuger':  'bg-teal-500',
-    'Gesäß':       'bg-pink-500',
-    'Waden':       'bg-lime-500',
-    'Cardio':      'bg-blue-500',
+    'Brust': 'bg-rose-500',
+    'Rücken': 'bg-sky-500',
+    'Schultern': 'bg-violet-500',
+    'Bizeps': 'bg-amber-500',
+    'Trizeps': 'bg-orange-500',
+    'Bauch': 'bg-yellow-500',
+    'Quadrizeps': 'bg-emerald-500',
+    'Beinbeuger': 'bg-teal-500',
+    'Gesäß': 'bg-pink-500',
+    'Waden': 'bg-lime-500',
+    'Cardio': 'bg-blue-500',
 }
 
 const muscleGroupStats = computed(() => {
@@ -326,11 +327,9 @@ async function downloadShare() {
         <template v-else>
             <!-- Header -->
             <div class="flex items-center gap-3">
-                <button @click="$router.back()" class="text-text-muted hover:text-text transition-colors shrink-0">
-                    <IconChevronLeft class="size-6" />
-                </button>
                 <div class="min-w-0 flex-1">
-                    <h1 class="text-xl font-semibold truncate">{{ workout?.name ?? session.workoutName ?? 'Session' }}</h1>
+                    <h1 class="text-xl font-semibold truncate">{{ workout?.name ?? session.workoutName ?? 'Session' }}
+                    </h1>
                     <p class="text-sm text-text-muted flex items-center gap-2 flex-wrap">
                         <span>{{ formatDate(session.date) }}</span>
                         <span v-if="formatDuration(session.durationSeconds)" class="flex items-center gap-1">
@@ -339,11 +338,9 @@ async function downloadShare() {
                         </span>
                     </p>
                 </div>
-                <button
-                    @click="showShareDrawer = true"
+                <button @click="showShareDrawer = true"
                     class="shrink-0 size-9 flex items-center justify-center rounded-xl bg-surface hover:bg-surface-hover border border-border transition-colors"
-                    title="Session teilen"
-                >
+                    title="Session teilen">
                     <IconShare2 class="size-4" />
                 </button>
             </div>
@@ -359,14 +356,13 @@ async function downloadShare() {
                     <template v-if="prevSession && prevVolume > 0">
                         <div class="text-text-muted mb-1">vs.</div>
                         <div>
-                            <div class="text-lg font-medium text-text-muted">{{ prevVolume.toLocaleString('de-DE') }} kg</div>
+                            <div class="text-lg font-medium text-text-muted">{{ prevVolume.toLocaleString('de-DE') }} kg
+                            </div>
                             <div class="text-xs text-text-muted mt-0.5">Letzte Session</div>
                         </div>
                         <div v-if="volumeDeltaPercent !== null" class="ml-auto">
-                            <span
-                                class="text-lg font-semibold"
-                                :class="volumeDeltaPercent >= 0 ? 'text-green-400' : 'text-red-400'"
-                            >
+                            <span class="text-lg font-semibold"
+                                :class="volumeDeltaPercent >= 0 ? 'text-green-400' : 'text-red-400'">
                                 {{ volumeDeltaPercent >= 0 ? '+' : '' }}{{ volumeDeltaPercent }}%
                             </span>
                         </div>
@@ -386,14 +382,13 @@ async function downloadShare() {
                     <template v-if="prevSession && prevRepsVolume > 0">
                         <div class="text-text-muted mb-1">vs.</div>
                         <div>
-                            <div class="text-lg font-medium text-text-muted">{{ prevRepsVolume.toLocaleString('de-DE') }}</div>
+                            <div class="text-lg font-medium text-text-muted">{{ prevRepsVolume.toLocaleString('de-DE')
+                                }}</div>
                             <div class="text-xs text-text-muted mt-0.5">Letzte Session</div>
                         </div>
                         <div v-if="repsVolumeDeltaPercent !== null" class="ml-auto">
-                            <span
-                                class="text-lg font-semibold"
-                                :class="repsVolumeDeltaPercent >= 0 ? 'text-green-400' : 'text-red-400'"
-                            >
+                            <span class="text-lg font-semibold"
+                                :class="repsVolumeDeltaPercent >= 0 ? 'text-green-400' : 'text-red-400'">
                                 {{ repsVolumeDeltaPercent >= 0 ? '+' : '' }}{{ repsVolumeDeltaPercent }}%
                             </span>
                         </div>
@@ -413,14 +408,13 @@ async function downloadShare() {
                     <template v-if="prevSession && prevCardioDuration > 0">
                         <div class="text-text-muted mb-1">vs.</div>
                         <div>
-                            <div class="text-lg font-medium text-text-muted">{{ formatDuration(prevCardioDuration) }}</div>
+                            <div class="text-lg font-medium text-text-muted">{{ formatDuration(prevCardioDuration) }}
+                            </div>
                             <div class="text-xs text-text-muted mt-0.5">Letzte Session</div>
                         </div>
                         <div v-if="cardioScoreDeltaPercent !== null" class="ml-auto">
-                            <span
-                                class="text-lg font-semibold"
-                                :class="cardioScoreDeltaPercent >= 0 ? 'text-green-400' : 'text-red-400'"
-                            >
+                            <span class="text-lg font-semibold"
+                                :class="cardioScoreDeltaPercent >= 0 ? 'text-green-400' : 'text-red-400'">
                                 {{ cardioScoreDeltaPercent >= 0 ? '+' : '' }}{{ cardioScoreDeltaPercent }}%
                             </span>
                         </div>
@@ -439,11 +433,9 @@ async function downloadShare() {
                             <span class="text-text-muted tabular-nums">{{ item.percent }}%</span>
                         </div>
                         <div class="h-2 bg-surface rounded-full overflow-hidden">
-                            <div
-                                class="h-full rounded-full transition-all duration-500"
+                            <div class="h-full rounded-full transition-all duration-500"
                                 :class="MUSCLE_GROUP_COLORS[item.group] ?? 'bg-primary-500'"
-                                :style="{ width: `${item.percent}%` }"
-                            />
+                                :style="{ width: `${item.percent}%` }" />
                         </div>
                     </div>
                 </div>
@@ -453,15 +445,13 @@ async function downloadShare() {
 
             <!-- Exercises -->
             <div class="space-y-3">
-                <div
-                    v-for="ex in session.exercises"
-                    :key="ex.exerciseId"
-                    class="bg-card border border-border rounded-2xl p-4 space-y-3"
-                >
+                <div v-for="ex in session.exercises" :key="ex.exerciseId"
+                    class="bg-card border border-border rounded-2xl p-4 space-y-3">
                     <!-- Exercise header -->
                     <div class="flex items-center justify-between">
                         <h3 class="font-semibold text-sm">{{ exerciseName(ex) }}</h3>
-                        <span v-if="isNewPR(ex)" class="text-xs bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded-full px-2 py-0.5 flex items-center gap-1">
+                        <span v-if="isNewPR(ex)"
+                            class="text-xs bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded-full px-2 py-0.5 flex items-center gap-1">
                             🏆 Neues PR
                         </span>
                     </div>
@@ -470,13 +460,15 @@ async function downloadShare() {
                     <template v-if="ex.sets && ex.sets.length > 0">
                         <div class="space-y-1">
                             <!-- time-mode header -->
-                            <div v-if="ex.strengthMode === 'time'" class="grid grid-cols-3 text-xs text-text-muted mb-2 px-1">
+                            <div v-if="ex.strengthMode === 'time'"
+                                class="grid grid-cols-3 text-xs text-text-muted mb-2 px-1">
                                 <span>Satz</span>
                                 <span class="text-center">Dauer</span>
                                 <span class="text-center text-primary-400">vs. letzte</span>
                             </div>
                             <!-- reps-only header -->
-                            <div v-else-if="ex.strengthMode === 'reps'" class="grid grid-cols-3 text-xs text-text-muted mb-2 px-1">
+                            <div v-else-if="ex.strengthMode === 'reps'"
+                                class="grid grid-cols-3 text-xs text-text-muted mb-2 px-1">
                                 <span>Satz</span>
                                 <span class="text-center">Reps</span>
                                 <span class="text-center text-primary-400">vs. letzte</span>
@@ -491,16 +483,15 @@ async function downloadShare() {
 
                             <!-- time-mode rows -->
                             <template v-if="ex.strengthMode === 'time'">
-                                <div
-                                    v-for="(set, i) in ex.sets"
-                                    :key="i"
-                                    class="grid grid-cols-3 text-sm py-1.5 px-1 rounded-lg even:bg-surface/40"
-                                >
+                                <div v-for="(set, i) in ex.sets" :key="i"
+                                    class="grid grid-cols-3 text-sm py-1.5 px-1 rounded-lg even:bg-surface/40">
                                     <span class="text-text-muted">{{ i + 1 }}</span>
-                                    <span class="text-center font-medium">{{ formatDuration(set.duration) ?? '—' }}</span>
+                                    <span class="text-center font-medium">{{ formatDuration(set.duration) ?? '—'
+                                        }}</span>
                                     <span class="text-center text-xs">
                                         <template v-if="setComparison(ex, i)">
-                                            <span :class="setComparison(ex, i)!.dir === 'better' ? 'text-green-400' : setComparison(ex, i)!.dir === 'worse' ? 'text-red-400' : 'text-text-muted'">
+                                            <span
+                                                :class="setComparison(ex, i)!.dir === 'better' ? 'text-green-400' : setComparison(ex, i)!.dir === 'worse' ? 'text-red-400' : 'text-text-muted'">
                                                 {{ setComparison(ex, i)!.label }}
                                             </span>
                                         </template>
@@ -511,16 +502,14 @@ async function downloadShare() {
 
                             <!-- reps-only rows -->
                             <template v-else-if="ex.strengthMode === 'reps'">
-                                <div
-                                    v-for="(set, i) in ex.sets"
-                                    :key="i"
-                                    class="grid grid-cols-3 text-sm py-1.5 px-1 rounded-lg even:bg-surface/40"
-                                >
+                                <div v-for="(set, i) in ex.sets" :key="i"
+                                    class="grid grid-cols-3 text-sm py-1.5 px-1 rounded-lg even:bg-surface/40">
                                     <span class="text-text-muted">{{ i + 1 }}</span>
                                     <span class="text-center font-medium">{{ set.reps ?? '—' }}</span>
                                     <span class="text-center text-xs">
                                         <template v-if="setComparison(ex, i)">
-                                            <span :class="setComparison(ex, i)!.dir === 'better' ? 'text-green-400' : setComparison(ex, i)!.dir === 'worse' ? 'text-red-400' : 'text-text-muted'">
+                                            <span
+                                                :class="setComparison(ex, i)!.dir === 'better' ? 'text-green-400' : setComparison(ex, i)!.dir === 'worse' ? 'text-red-400' : 'text-text-muted'">
                                                 {{ setComparison(ex, i)!.label }}
                                             </span>
                                         </template>
@@ -531,11 +520,8 @@ async function downloadShare() {
 
                             <!-- reps+weight rows (default) -->
                             <template v-else>
-                                <div
-                                    v-for="(set, i) in ex.sets"
-                                    :key="i"
-                                    class="grid grid-cols-4 text-sm py-1.5 px-1 rounded-lg even:bg-surface/40"
-                                >
+                                <div v-for="(set, i) in ex.sets" :key="i"
+                                    class="grid grid-cols-4 text-sm py-1.5 px-1 rounded-lg even:bg-surface/40">
                                     <span class="text-text-muted">{{ i + 1 }}</span>
                                     <span class="text-center font-medium">{{ set.reps ?? '—' }}</span>
                                     <span class="text-center font-medium">
@@ -543,7 +529,8 @@ async function downloadShare() {
                                     </span>
                                     <span class="text-center text-xs">
                                         <template v-if="setComparison(ex, i)">
-                                            <span :class="setComparison(ex, i)!.dir === 'better' ? 'text-green-400' : setComparison(ex, i)!.dir === 'worse' ? 'text-red-400' : 'text-text-muted'">
+                                            <span
+                                                :class="setComparison(ex, i)!.dir === 'better' ? 'text-green-400' : setComparison(ex, i)!.dir === 'worse' ? 'text-red-400' : 'text-text-muted'">
                                                 {{ setComparison(ex, i)!.label }}
                                             </span>
                                         </template>
@@ -558,7 +545,8 @@ async function downloadShare() {
                     <template v-else>
                         <div class="flex gap-4 text-sm">
                             <div v-if="ex.duration != null">
-                                <div class="font-medium">{{ Math.floor(ex.duration / 60) }}:{{ String(ex.duration % 60).padStart(2, '0') }}</div>
+                                <div class="font-medium">{{ Math.floor(ex.duration / 60) }}:{{ String(ex.duration %
+                                    60).padStart(2, '0') }}</div>
                                 <div class="text-xs text-text-muted">Dauer</div>
                             </div>
                             <div v-if="ex.metricValue != null">
@@ -569,7 +557,8 @@ async function downloadShare() {
                     </template>
 
                     <!-- Note -->
-                    <div v-if="ex.note" class="flex items-start gap-2 bg-surface/60 border border-border/60 rounded-xl px-3 py-2.5 text-sm text-text-muted">
+                    <div v-if="ex.note"
+                        class="flex items-start gap-2 bg-surface/60 border border-border/60 rounded-xl px-3 py-2.5 text-sm text-text-muted">
                         <IconNotebookPen class="size-3.5 shrink-0 mt-0.5 text-primary-400" />
                         <span class="leading-snug">{{ ex.note }}</span>
                     </div>
@@ -585,24 +574,16 @@ async function downloadShare() {
         <!-- Vorschau: zoom skaliert zur Drawer-Breite; shareCardRef hat kein eigenes zoom → Capture immer in voller Auflösung -->
         <div ref="sharePreviewWrapper" :style="{ zoom: cardScale }" class="rounded-2xl overflow-hidden">
             <div ref="shareCardRef">
-                <ShareCard
-                    v-if="session"
-                    :workout-name="workout?.name ?? session.workoutName ?? 'Workout'"
-                    :date="shareDate"
-                    :duration="shareDuration"
-                    :exercises="shareSummaryExercises"
+                <ShareCard v-if="session" :workout-name="workout?.name ?? session.workoutName ?? 'Workout'"
+                    :date="shareDate" :duration="shareDuration" :exercises="shareSummaryExercises"
                     :total-volume="currentVolume > 0 ? currentVolume : undefined"
                     :total-reps="currentRepsVolume > 0 ? currentRepsVolume : undefined"
-                    :muscle-groups="muscleGroupStats"
-                />
+                    :muscle-groups="muscleGroupStats" />
             </div>
         </div>
 
-        <button
-            @click="downloadShare"
-            :disabled="downloading"
-            class="w-full flex items-center justify-center gap-2 h-12 rounded-2xl bg-primary-500 hover:bg-primary-600 text-white font-semibold transition-colors disabled:opacity-50"
-        >
+        <button @click="downloadShare" :disabled="downloading"
+            class="w-full flex items-center justify-center gap-2 h-12 rounded-2xl bg-primary-500 hover:bg-primary-600 text-white font-semibold transition-colors disabled:opacity-50">
             <IconLoaderCircle v-if="downloading" class="size-4 animate-spin" />
             <IconDownload v-else class="size-4" />
             {{ canShare ? 'Teilen' : 'Herunterladen' }}

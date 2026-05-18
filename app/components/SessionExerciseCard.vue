@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { Exercise, StrengthExercise } from '~/types/workout'
 import type { WorkoutSessionExercise } from '~/types/session'
+import { secondsToDisplay, displayToSeconds, autoUnit } from '~/utils/duration'
+import { useSwipeGesture } from '~/composables/useSwipeGesture'
 
 interface LocalSet {
     reps?: number
@@ -64,108 +66,37 @@ const metricLabel = computed(() => {
 
 const durationUnit = computed((): 's' | 'min' => {
     if (props.exercise.type !== 'cardio') return 's'
-    const d = (props.exercise as any).duration ?? 0
-    return d >= 60 && d % 60 === 0 ? 'min' : 's'
+    return autoUnit((props.exercise as any).duration ?? 0)
 })
 
 // For time-mode sets: auto-detect unit from first template set
 const timeDurationUnit = computed((): 's' | 'min' => {
     if (props.exercise.type !== 'strength') return 's'
-    const firstDur = (props.exercise as StrengthExercise).sets[0]?.duration ?? 0
-    return firstDur >= 60 && firstDur % 60 === 0 ? 'min' : 's'
+    return autoUnit((props.exercise as StrengthExercise).sets[0]?.duration ?? 0)
 })
 
 function getSetDurationDisplay(i: number): number | undefined {
-    const v = props.modelValue.sets[i]?.duration
-    if (v == null) return undefined
-    return timeDurationUnit.value === 'min' ? Math.round(v / 60 * 100) / 100 : v
+    return secondsToDisplay(props.modelValue.sets[i]?.duration, timeDurationUnit.value)
 }
 
 function setSetDuration(i: number, val: number | undefined) {
-    const secs = val == null || isNaN(val as number)
-        ? undefined
-        : timeDurationUnit.value === 'min' ? Math.round((val as number) * 60) : (val as number)
-    updateSet(i, { duration: secs })
+    updateSet(i, { duration: displayToSeconds(val, timeDurationUnit.value) })
 }
 
 const durationDisplay = computed({
-    get(): number | undefined {
-        const v = props.modelValue.duration
-        if (v == null) return undefined
-        return durationUnit.value === 'min' ? Math.round(v / 60 * 100) / 100 : v
-    },
-    set(val: number | undefined) {
-        const secs = val == null || isNaN(val as number)
-            ? undefined
-            : durationUnit.value === 'min' ? Math.round((val as number) * 60) : (val as number)
-        update({ duration: secs })
-    },
+    get: () => secondsToDisplay(props.modelValue.duration, durationUnit.value),
+    set: (val: number | undefined) => update({ duration: displayToSeconds(val, durationUnit.value) }),
 })
 
 const completedSetCount = computed(() => props.modelValue.sets.filter(s => s.completed).length)
 const totalSetCount = computed(() => props.modelValue.sets.length)
 
 // ── Swipe gesture ──────────────────────────────────────────────────────────
-const dragX = ref(0)
-const isDragging = ref(false)
-let touchStartX = 0
-let touchStartY = 0
-let isHorizontalSwipe = false
-
-const SWIPE_THRESHOLD = 72
-
-function onTouchStart(e: TouchEvent) {
-    touchStartX = e.touches[0]!.clientX
-    touchStartY = e.touches[0]!.clientY
-    isDragging.value = true
-    isHorizontalSwipe = false
-    dragX.value = 0
-}
-
-function onTouchMove(e: TouchEvent) {
-    if (!isDragging.value) return
-    const dx = e.touches[0]!.clientX - touchStartX
-    const dy = e.touches[0]!.clientY - touchStartY
-
-    if (!isHorizontalSwipe) {
-        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 8) {
-            isHorizontalSwipe = true
-        } else if (Math.abs(dy) > 8) {
-            isDragging.value = false
-            return
-        } else {
-            return
-        }
-    }
-
-    e.preventDefault()
-    const skipped = !!props.modelValue.skipped
-    if (!skipped && dx < 0) {
-        dragX.value = Math.max(dx, -150)
-    } else if (skipped && dx > 0) {
-        dragX.value = Math.min(dx, 150)
-    } else {
-        dragX.value = 0
-    }
-}
-
-function onTouchEnd() {
-    isDragging.value = false
-    const skipped = !!props.modelValue.skipped
-    if (!skipped && dragX.value <= -SWIPE_THRESHOLD) {
-        update({ skipped: true })
-    } else if (skipped && dragX.value >= SWIPE_THRESHOLD) {
-        update({ skipped: false })
-    }
-    dragX.value = 0
-}
-
-const cardStyle = computed(() => ({
-    transform: `translateX(${dragX.value}px)`,
-    transition: isDragging.value ? 'none' : 'transform 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-}))
-
-const swipeProgress = computed(() => Math.min(Math.abs(dragX.value) / SWIPE_THRESHOLD, 1))
+const { onTouchStart, onTouchMove, onTouchEnd, cardStyle, swipeProgress } = useSwipeGesture(
+    () => !!props.modelValue.skipped,
+    () => update({ skipped: true }),
+    () => update({ skipped: false }),
+)
 
 // Note
 const showNoteInput = ref(!!props.modelValue.note)

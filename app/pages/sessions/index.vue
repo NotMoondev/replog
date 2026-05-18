@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import { useSessionStore, computeVolume, computeRepsVolume, computeCardioScore } from '~/stores/useSessionStore'
+import { useSessionStore } from '~/stores/useSessionStore'
+import { computeVolume, computeRepsVolume, computeCardioScore } from '~/utils/metrics'
 import { useWorkoutStore } from '~/stores/useWorkoutStore'
+import { useFormatters } from '~/composables/useFormatters'
 
 const sessionStore = useSessionStore()
 const workoutStore = useWorkoutStore()
+const { formatDate, formatDuration } = useFormatters()
 
 onMounted(async () => {
     await Promise.all([
@@ -18,17 +21,6 @@ function workoutName(workoutId: string, sessionIndex: number): string {
         ?? 'Unbekanntes Workout'
 }
 
-function formatDate(iso: string): string {
-    return new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: 'short', year: 'numeric' })
-}
-
-function formatDuration(seconds?: number): string | null {
-    if (!seconds) return null
-    const m = Math.floor(seconds / 60)
-    const s = seconds % 60
-    if (m === 0) return `${s}s`
-    return s > 0 ? `${m} min ${s}s` : `${m} min`
-}
 
 function volumeDelta(sessionIndex: number): { value: number; percent: number; label: string } | null {
     const session = sessionStore.allSessions[sessionIndex]

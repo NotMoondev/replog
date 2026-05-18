@@ -4,20 +4,18 @@ const route = useRoute()
 const router = useRouter()
 const activeSession = useActiveSession()
 
-const isHome = computed(() => route.path === '/')
-const isWorkouts = computed(() => route.path.startsWith('/workouts'))
-const isPlan = computed(() => route.path.startsWith('/plan'))
-const isSessions = computed(() => route.path.startsWith('/sessions'))
-const isStats = computed(() => route.path.startsWith('/stats'))
 const isSession = computed(() => route.path.startsWith('/session/') || route.path === '/session')
+
+function isActive(path: string): boolean {
+    return path === '/' ? route.path === '/' : route.path.startsWith(path)
+}
 </script>
 
 <template>
     <!-- Fade overlay behind the nav -->
-    <div v-if="!isSession" class="fixed bottom-0 inset-x-0 h-28 z-30 pointer-events-none"
-        style="background: linear-gradient(to top, rgba(var(--color-bg-rgb), 0.85) 0%, rgba(var(--color-bg-rgb), 0) 100%);" />
+    <div v-if="!isSession" class="fixed bottom-0 inset-x-0 h-30 z-30 pointer-events-none nav-fade-overlay" />
 
-    <div v-if="!isSession" class="fixed bottom-4 inset-x-4 z-40 flex flex-col gap-2">
+    <div v-if="!isSession" class="fixed bottom-6 inset-x-4 z-40 flex flex-col gap-2">
         <!-- Active session resume banner -->
         <Transition
             enter-active-class="transition duration-300 ease-out"
@@ -44,7 +42,7 @@ const isSession = computed(() => route.path.startsWith('/session/') || route.pat
             <NuxtLink
                 to="/"
                 class="flex-1 flex flex-col items-center py-3 gap-0.5 transition-colors"
-                :class="isHome ? 'text-primary-500' : 'text-text-muted'"
+                :class="isActive('/') ? 'text-primary-500' : 'text-text-muted'"
             >
                 <IconHouse class="size-5" />
                 <span class="text-[10px] font-medium">Home</span>
@@ -53,7 +51,7 @@ const isSession = computed(() => route.path.startsWith('/session/') || route.pat
             <NuxtLink
                 to="/plan"
                 class="flex-1 flex flex-col items-center py-3 gap-0.5 transition-colors"
-                :class="isPlan ? 'text-primary-500' : 'text-text-muted'"
+                :class="isActive('/plan') ? 'text-primary-500' : 'text-text-muted'"
             >
                 <IconCalendar class="size-5" />
                 <span class="text-[10px] font-medium">Plan</span>
@@ -62,7 +60,7 @@ const isSession = computed(() => route.path.startsWith('/session/') || route.pat
             <NuxtLink
                 to="/workouts"
                 class="flex-1 flex flex-col items-center py-3 gap-0.5 transition-colors"
-                :class="isWorkouts ? 'text-primary-500' : 'text-text-muted'"
+                :class="isActive('/workouts') ? 'text-primary-500' : 'text-text-muted'"
             >
                 <IconDumbbell class="size-5" />
                 <span class="text-[10px] font-medium">Workouts</span>
@@ -71,7 +69,7 @@ const isSession = computed(() => route.path.startsWith('/session/') || route.pat
             <NuxtLink
                 to="/sessions"
                 class="flex-1 flex flex-col items-center py-3 gap-0.5 transition-colors"
-                :class="isSessions ? 'text-primary-500' : 'text-text-muted'"
+                :class="isActive('/sessions') ? 'text-primary-500' : 'text-text-muted'"
             >
                 <IconClipboardList class="size-5" />
                 <span class="text-[10px] font-medium">Sessions</span>
@@ -80,7 +78,7 @@ const isSession = computed(() => route.path.startsWith('/session/') || route.pat
             <NuxtLink
                 to="/stats"
                 class="flex-1 flex flex-col items-center py-3 gap-0.5 transition-colors"
-                :class="isStats ? 'text-primary-500' : 'text-text-muted'"
+                :class="isActive('/stats') ? 'text-primary-500' : 'text-text-muted'"
             >
                 <IconBarChart2 class="size-5" />
                 <span class="text-[10px] font-medium">Statistiken</span>

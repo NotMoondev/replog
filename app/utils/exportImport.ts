@@ -2,6 +2,18 @@ import { db } from '~/utils/db'
 import type { TrainingPlan } from '~/types/trainingPlan'
 import type { Workout, Exercise } from '~/types/workout'
 
+function downloadJSON(data: unknown, filename: string): void {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+}
+
 interface ExportData {
     version: number
     exportedAt: string
@@ -21,15 +33,7 @@ export async function exportAllData(): Promise<void> {
         exercises: await db.exercises.toArray(),
     }
 
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `replog-export-${new Date().toISOString().slice(0, 10)}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    downloadJSON(data, `replog-export-${new Date().toISOString().slice(0, 10)}.json`)
 }
 
 export async function importAllData(file: File): Promise<void> {
@@ -81,16 +85,8 @@ export function exportPlan(plan: TrainingPlan, allWorkouts: Workout[]): void {
         plan,
         workouts,
     }
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
     const safeName = plan.name.replace(/[^a-z0-9]/gi, '-').toLowerCase()
-    a.download = `replog-plan-${safeName}-${new Date().toISOString().slice(0, 10)}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    downloadJSON(data, `replog-plan-${safeName}-${new Date().toISOString().slice(0, 10)}.json`)
 }
 
 export interface ImportedPlan {

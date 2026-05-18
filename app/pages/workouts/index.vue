@@ -2,6 +2,7 @@
 import { useWorkoutStore } from '~/stores/useWorkoutStore'
 import { useSessionStore } from '~/stores/useSessionStore'
 import { useActiveSession } from '~/composables/useActiveSession'
+import { useFormatters } from '~/composables/useFormatters'
 
 const store = useWorkoutStore()
 const sessionStore = useSessionStore()
@@ -9,6 +10,7 @@ const activeSession = useActiveSession()
 const { showConflict, navigateTo, confirmDiscard, confirmResume, cancel: cancelConflict } = activeSession.useConflictGuard()
 const showCreateDrawer = ref(false)
 const newName = ref('')
+const { formatLastSession } = useFormatters()
 
 onMounted(async () => {
     await Promise.all([store.loadWorkouts(), sessionStore.loadAllSessions()])
@@ -24,14 +26,7 @@ async function create() {
 
 function lastSessionLabel(workoutId: string): string | null {
     const last = sessionStore.allSessions.find(s => s.workoutId === workoutId)
-    if (!last) return null
-    const date = new Date(last.date)
-    const now = new Date()
-    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
-    if (diffDays === 0) return 'Zuletzt: Heute'
-    if (diffDays === 1) return 'Zuletzt: Gestern'
-    if (diffDays < 7) return `Zuletzt: vor ${diffDays} Tagen`
-    return `Zuletzt: ${date.toLocaleDateString('de-DE', { day: '2-digit', month: 'short' })}`
+    return last ? formatLastSession(last.date) : null
 }
 </script>
 
@@ -121,39 +116,11 @@ function lastSessionLabel(workoutId: string): string | null {
         </button>
     </BottomDrawer>
 
-    <!-- Session conflict dialog -->
-    <Teleport to="body">
-        <Transition
-            enter-active-class="transition duration-200 ease-out"
-            enter-from-class="opacity-0"
-            enter-to-class="opacity-100"
-            leave-active-class="transition duration-150 ease-in"
-            leave-from-class="opacity-100"
-            leave-to-class="opacity-0"
-        >
-            <div v-if="showConflict" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-                <Transition
-                    appear
-                    enter-active-class="transition duration-200 ease-out"
-                    enter-from-class="opacity-0 scale-95"
-                    enter-to-class="opacity-100 scale-100"
-                >
-                    <div class="bg-card border border-border rounded-2xl p-6 space-y-4 max-w-sm w-full">
-                        <h3 class="font-semibold text-lg text-text">Session läuft noch</h3>
-                        <p class="text-sm text-text-muted">
-                            Du hast noch eine aktive Session für
-                            <span class="font-semibold text-text">„{{ activeSession.meta.value?.workoutName }}“</span>.
-                            Was möchtest du tun?
-                        </p>
-                        <div class="flex flex-col gap-2">
-                            <button @click="confirmResume" class="w-full bg-primary-500 hover:bg-primary-600 text-white rounded-xl py-2.5 font-semibold text-sm transition-colors">Aktive Session fortsetzen</button>
-                            <button @click="confirmDiscard" class="w-full bg-surface hover:bg-surface-hover border border-border text-text rounded-xl py-2.5 font-semibold text-sm transition-colors">Session verwerfen &amp; neu starten</button>
-                            <button @click="cancelConflict" class="w-full text-text-muted hover:text-text text-sm py-1.5 transition-colors">Abbrechen</button>
-                        </div>
-                    </div>
-                </Transition>
-            </div>
-        </Transition>
-    </Teleport>
+    <SessionConflictDialog
+        :show="showConflict"
+        @resume="confirmResume"
+        @discard="confirmDiscard"
+        @cancel="cancelConflict"
+    />
 </template>
 
