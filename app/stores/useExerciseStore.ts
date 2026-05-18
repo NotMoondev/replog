@@ -27,9 +27,9 @@ export const useExerciseStore = defineStore('exercises', {
             const raw: Exercise = JSON.parse(JSON.stringify(toRaw(exercise)))
             const index = this.exercises.findIndex(e => e.id === exercise.id)
             if (index === -1) {
-                // First-time override of a preset exercise
+                // Not in memory yet (loadExercises not called) — use put() to safely upsert
                 this.exercises.push(raw)
-                await db.exercises.add(raw)
+                await db.exercises.put(raw)
             } else {
                 this.exercises[index] = raw
                 await db.exercises.put(raw)
