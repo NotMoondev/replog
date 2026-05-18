@@ -5,6 +5,7 @@ export function useTimer() {
     const elapsed = ref(0)
 
     let interval: ReturnType<typeof setInterval> | null = null
+    let didVibrateOnEnd = false
 
     // absolute time
     let endTime: number | null = null
@@ -16,6 +17,17 @@ export function useTimer() {
         }
     }
 
+    function notificationsEnabled(): boolean {
+        return localStorage.getItem('timerNotificationEnabled') === 'true'
+            && typeof Notification !== 'undefined'
+            && Notification.permission === 'granted'
+    }
+
+    function postToSW(message: object) {
+        if (typeof navigator === 'undefined' || !navigator.serviceWorker?.controller) return
+        navigator.serviceWorker.controller.postMessage(message)
+    }
+
     function updateRemaining() {
         if (!endTime) return
 
@@ -24,11 +36,29 @@ export function useTimer() {
 
         if (diff > 0) {
             remaining.value = Math.ceil(diff / 1000)
+            didVibrateOnEnd = false
         } else {
             remaining.value = 0
             if (isRunning.value) {
                 isRunning.value = false
                 hasEnded.value = true
+                if (!didVibrateOnEnd) {
+                    didVibrateOnEnd = true
+                    navigator.vibrate?.([300, 100, 300])
+                    // Fire notification directly from main thread (reliable for desktop/Firefox)
+                    if (notificationsEnabled()) {
+                        try {
+                            new Notification('Pause vorbei!', {
+                                body: 'Dein Pausentimer ist abgelaufen.',
+                                icon: '/icons/icon-192.png',
+                                tag: 'replog-timer',
+                                renotify: true,
+                            })
+                        } catch {}
+                        // Cancel SW timeout to avoid duplicate notification
+                        postToSW({ type: 'TIMER_CANCEL' })
+                    }
+                }
             }
             elapsed.value = Math.floor(-diff / 1000)
         }
@@ -39,6 +69,7 @@ export function useTimer() {
 
         hasEnded.value = false
         elapsed.value = 0
+        didVibrateOnEnd = false
 
         const now = Date.now()
         endTime = now + seconds * 1000
@@ -50,6 +81,10 @@ export function useTimer() {
         interval = setInterval(() => {
             updateRemaining()
         }, 250)
+
+        if (notificationsEnabled()) {
+            postToSW({ type: 'TIMER_START', endTime })
+        }
     }
 
     function start() {
@@ -72,6 +107,10 @@ export function useTimer() {
         remaining.value = 0
         elapsed.value = 0
         endTime = null
+        didVibrateOnEnd = false
+        if (notificationsEnabled()) {
+            postToSW({ type: 'TIMER_CANCEL' })
+        }
     }
 
     /** Restore a running/elapsed timer from a previously saved absolute end timestamp. */
@@ -80,6 +119,7 @@ export function useTimer() {
         endTime = savedEndTime
         hasEnded.value = false
         elapsed.value = 0
+        didVibrateOnEnd = false
         // Determine initial state without starting the interval yet
         updateRemaining()
         // Only keep the interval running if still counting down or already past (show elapsed)
@@ -88,6 +128,10 @@ export function useTimer() {
         interval = setInterval(() => {
             updateRemaining()
         }, 250)
+
+        if (isRunning.value && notificationsEnabled()) {
+            postToSW({ type: 'TIMER_START', endTime })
+        }
     }
 
     function getEndTime(): number | null {

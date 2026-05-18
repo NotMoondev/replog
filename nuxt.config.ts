@@ -91,11 +91,11 @@ export default defineNuxtConfig({
                 },
             ],
         },
-        workbox: {
-            navigateFallback: `${baseURL}index.html`,
-            navigateFallbackDenylist: [/^\/api\//],
+        injectManifest: {
             globPatterns: ['**/*.{js,css,html,png,svg,ico,woff,woff2,webp}'],
         },
+        strategies: 'injectManifest',
+        filename: 'sw.ts',
         devOptions: {
             enabled: true,
             type: 'module',
