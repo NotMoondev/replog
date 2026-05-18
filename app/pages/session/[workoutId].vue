@@ -90,6 +90,12 @@ watch(localData, saveDraft, { deep: true })
 watch(addedExercises, saveDraft, { deep: true })
 watch([timer.isRunning, timer.hasEnded], saveDraft)
 
+watch(timer.hasEnded, (ended) => {
+    if (ended && localStorage.getItem('timerAutoClose') === 'true') {
+        timer.stop()
+    }
+})
+
 const totalCompletedSets = computed(() => {
     let count = 0
     for (const d of localData.value) {

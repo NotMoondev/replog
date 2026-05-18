@@ -10,12 +10,43 @@ const { public: { appVersion } } = useRuntimeConfig()
 // Timer settings
 const timerEnabled = ref(localStorage.getItem('timerEnabled') !== 'false')
 const timerDuration = ref(parseInt(localStorage.getItem('timerDuration') ?? '90', 10))
+const timerAutoClose = ref(localStorage.getItem('timerAutoClose') === 'true')
+const timerNotificationEnabled = ref(localStorage.getItem('timerNotificationEnabled') === 'true')
+const notificationPermission = ref<NotificationPermission>(
+    typeof Notification !== 'undefined' ? Notification.permission : 'default'
+)
 
 watch(timerEnabled, (val) => localStorage.setItem('timerEnabled', String(val)))
 watch(timerDuration, (val) => {
     const parsed = Math.max(1, Math.round(val))
     localStorage.setItem('timerDuration', String(parsed))
 })
+watch(timerAutoClose, (val) => localStorage.setItem('timerAutoClose', String(val)))
+
+async function toggleTimerNotification() {
+    if (timerNotificationEnabled.value) {
+        timerNotificationEnabled.value = false
+        localStorage.setItem('timerNotificationEnabled', 'false')
+        return
+    }
+    if (typeof Notification === 'undefined') {
+        addToast('Benachrichtigungen werden in diesem Browser nicht unterstützt.', 'error')
+        return
+    }
+    if (Notification.permission === 'denied') {
+        addToast('Benachrichtigungen sind im Browser blockiert. Bitte in den Browser-Einstellungen erlauben.', 'error')
+        return
+    }
+    const permission = await Notification.requestPermission()
+    notificationPermission.value = permission
+    if (permission === 'granted') {
+        timerNotificationEnabled.value = true
+        localStorage.setItem('timerNotificationEnabled', 'true')
+        addToast('Timer-Benachrichtigungen aktiviert')
+    } else {
+        addToast('Benachrichtigungen abgelehnt – Timer-Notification nicht aktiv.', 'error')
+    }
+}
 
 const themeOptions = [
     { value: 'dark', label: 'Dunkel', icon: 'IconMoon' },
@@ -122,6 +153,37 @@ async function handleImport(event: Event) {
                         class="size-8 flex items-center justify-center bg-surface hover:bg-surface-hover border border-border rounded-lg text-sm transition-colors"
                     >+</button>
                 </div>
+            </div>
+            <div v-if="timerEnabled" class="flex items-center justify-between">
+                <span class="text-sm font-medium">Timer automatisch schließen</span>
+                <button
+                    @click="timerAutoClose = !timerAutoClose"
+                    class="relative w-11 h-6 rounded-full transition-colors shrink-0"
+                    :class="timerAutoClose ? 'bg-primary-500' : 'bg-surface-hover border border-border'"
+                >
+                    <span
+                        class="absolute top-0.5 left-0.5 size-5 bg-white rounded-full shadow transition-transform duration-200"
+                        :class="timerAutoClose ? 'translate-x-5' : 'translate-x-0'"
+                    />
+                </button>
+            </div>
+            <div v-if="timerEnabled" class="flex items-center justify-between">
+                <div class="flex-1 min-w-0 mr-4">
+                    <span class="text-sm font-medium block">Benachrichtigung bei Ablauf</span>
+                    <span v-if="notificationPermission === 'denied'" class="text-xs text-red-400 mt-0.5 block">
+                        Im Browser blockiert
+                    </span>
+                </div>
+                <button
+                    @click="toggleTimerNotification"
+                    class="relative w-11 h-6 rounded-full transition-colors shrink-0"
+                    :class="timerNotificationEnabled && notificationPermission === 'granted' ? 'bg-primary-500' : 'bg-surface-hover border border-border'"
+                >
+                    <span
+                        class="absolute top-0.5 left-0.5 size-5 bg-white rounded-full shadow transition-transform duration-200"
+                        :class="timerNotificationEnabled && notificationPermission === 'granted' ? 'translate-x-5' : 'translate-x-0'"
+                    />
+                </button>
             </div>
         </div>
 
