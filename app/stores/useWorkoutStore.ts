@@ -67,6 +67,16 @@ export const useWorkoutStore = defineStore('workouts', {
             useToast().addToast('Workout umbenannt')
         },
 
+        async moveExercise(workoutId: string, fromIndex: number, toIndex: number) {
+            const workout = this.workouts.find(w => w.id === workoutId)
+            if (!workout) return
+            if (toIndex < 0 || toIndex >= workout.exercises.length) return
+            const exercises = workout.exercises
+            const [moved] = exercises.splice(fromIndex, 1)
+            exercises.splice(toIndex, 0, moved)
+            await db.workouts.put(JSON.parse(JSON.stringify(toRaw(workout))))
+        },
+
         async cloneWorkout(id: string) {
             const original = this.workouts.find(w => w.id === id)
             if (!original) return
