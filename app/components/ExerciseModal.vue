@@ -42,7 +42,7 @@ function toggleMuscleGroup(mg: MuscleGroup) {
     else muscleGroups.value.splice(idx, 1)
 }
 
-/* Strength sets – reps/weight/duration fields are all optional depending on mode */
+/* Strength sets - reps/weight/duration fields are all optional depending on mode */
 const sets = ref<Array<{ reps?: number; weight?: number; duration?: number }>>([
     { reps: undefined, weight: undefined, duration: undefined }
 ])

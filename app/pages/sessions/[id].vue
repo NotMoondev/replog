@@ -301,7 +301,7 @@ async function downloadShare() {
         const filename = shareFilename()
         const file = new File([blob], filename, { type: 'image/png' })
         if (navigator.canShare?.({ files: [file] })) {
-            await navigator.share({ files: [file], title: `${workout.value?.name ?? 'Workout'} – REPLOG` })
+            await navigator.share({ files: [file], title: `${workout.value?.name ?? 'Workout'} - REPLOG` })
         } else {
             const a = document.createElement('a')
             a.href = dataUrl
@@ -573,7 +573,7 @@ async function downloadShare() {
 
         <!-- Vorschau: zoom skaliert zur Drawer-Breite; shareCardRef hat kein eigenes zoom → Capture immer in voller Auflösung -->
         <div ref="sharePreviewWrapper" :style="{ zoom: cardScale }" class="rounded-2xl overflow-hidden">
-            <div ref="shareCardRef">
+            <div ref="shareCardRef" class="flex items-center justify-center">
                 <ShareCard v-if="session" :workout-name="workout?.name ?? session.workoutName ?? 'Workout'"
                     :date="shareDate" :duration="shareDuration" :exercises="shareSummaryExercises"
                     :total-volume="currentVolume > 0 ? currentVolume : undefined"

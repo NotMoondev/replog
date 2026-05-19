@@ -30,6 +30,21 @@ const todayWorkout = computed(() => {
     return store.workouts.find(w => w.id === wid) ?? null
 })
 
+const todaySession = computed(() => {
+    if (!todayWorkout.value) return null
+    const todayStart = new Date()
+    todayStart.setHours(0, 0, 0, 0)
+    const todayEnd = new Date()
+    todayEnd.setHours(23, 59, 59, 999)
+
+    return sessionStore.allSessions.find(s => {
+        const sessionDate = new Date(s.date)
+        return s.workoutId === todayWorkout.value!.id &&
+               sessionDate >= todayStart &&
+               sessionDate <= todayEnd
+    }) ?? null
+})
+
 const weekDays = computed(() => {
     if (!planStore.activePlan) return []
     return planStore.activePlan.days.map((day, i) => ({
@@ -144,7 +159,7 @@ onMounted(async () => {
             <p class="text-xs font-semibold text-text-muted uppercase tracking-wider">Heutiges Training</p>
 
             <div v-if="!planStore.activePlan" class="text-sm text-text-muted">
-                Kein Trainingsplan aktiv. —
+                Kein Trainingsplan aktiv.
                 <NuxtLink to="/plan" class="text-primary-400 hover:text-primary-300 transition-colors">Plan erstellen</NuxtLink>
             </div>
 
@@ -158,7 +173,27 @@ onMounted(async () => {
                     <div class="font-semibold">{{ todayWorkout.name }}</div>
                     <div class="text-xs text-text-muted">{{ todayWorkout.exercises.length }} Übungen</div>
                 </div>
+
+                <!-- Already completed today -->
+                <div v-if="todaySession" class="space-y-2">
+                    <div class="flex items-center gap-2 text-green-400">
+                        <IconCircleCheck class="size-5" />
+                        <span class="text-sm font-medium">Training erfolgreich abgeschlossen!</span>
+                    </div>
+                    <p class="text-xs text-text-muted">
+                        Großartig! Du hast dein Training für heute getrackt. Weiter so!
+                    </p>
+                    <NuxtLink
+                        :to="`/sessions/${todaySession.id}`"
+                        class="block w-full bg-surface hover:bg-border text-text text-center rounded-xl py-2.5 font-semibold text-sm transition-colors"
+                    >
+                        Session anzeigen
+                    </NuxtLink>
+                </div>
+
+                <!-- Not yet started -->
                 <button
+                    v-else
                     @click="navigateTo(todayWorkout.id, todayWorkout.name)"
                     class="block w-full bg-primary-500 hover:bg-primary-600 text-white text-center rounded-xl py-2.5 font-semibold text-sm transition-colors"
                 >

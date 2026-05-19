@@ -44,7 +44,7 @@ async function toggleTimerNotification() {
         localStorage.setItem('timerNotificationEnabled', 'true')
         addToast('Timer-Benachrichtigungen aktiviert')
     } else {
-        addToast('Benachrichtigungen abgelehnt – Timer-Notification nicht aktiv.', 'error')
+        addToast('Benachrichtigungen abgelehnt, Timer-Notification nicht aktiv.', 'error')
     }
 }
 

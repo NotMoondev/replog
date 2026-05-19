@@ -57,7 +57,7 @@ function saveDraft() {
             elapsedSeconds,
             timerEndTime: timer.isRunning.value ? timer.getEndTime() : null,
         }))
-    } catch { /* quota exceeded – silently ignore */ }
+    } catch { /* quota exceeded - silently ignore */ }
 }
 
 function clearDraft() {

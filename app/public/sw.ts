@@ -10,7 +10,7 @@ clientsClaim()
 precacheAndRoute(self.__WB_MANIFEST)
 cleanupOutdatedCaches()
 
-// SPA navigation fallback – serve the cached index.html for all navigations
+// SPA navigation fallback - serve the cached index.html for all navigations
 const baseUrl = import.meta.env.BASE_URL ?? '/'
 registerRoute(
     new NavigationRoute(
