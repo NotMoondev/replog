@@ -10,10 +10,13 @@ import type { WorkoutSessionExercise } from '~/types/session'
 import type { CardioExercise, MuscleGroup } from '~/types/workout'
 import { usePreferredMetric, METRIC_OPTIONS } from '~/composables/usePreferredMetric'
 import type { MetricMode } from '~/composables/usePreferredMetric'
+import { useExerciseStore } from '~/stores/useExerciseStore'
+import { PRESET_EXERCISES } from '~/utils/presetExercises'
 
 const route = useRoute()
 const sessionStore = useSessionStore()
 const workoutStore = useWorkoutStore()
+const exerciseStore = useExerciseStore()
 
 const sessionId = computed(() => route.params.id as string)
 
@@ -21,12 +24,63 @@ onMounted(async () => {
     await Promise.all([
         sessionStore.loadAllSessions(),
         workoutStore.loadWorkouts(),
+        exerciseStore.loadExercises(),
     ])
 })
 
 const session = computed(() =>
     sessionStore.allSessions.find(s => s.id === sessionId.value)
 )
+
+// Detect standalone cardio sessions (created from /session/exercise/[id])
+const isCardioOnlySession = computed(() =>
+    !!session.value?.workoutId.startsWith('exercise:')
+)
+
+const cardioExerciseId = computed(() => {
+    if (!isCardioOnlySession.value || !session.value) return null
+    return session.value.workoutId.replace('exercise:', '')
+})
+
+const cardioExerciseDef = computed(() => {
+    if (!cardioExerciseId.value) return null
+    const fromStore = exerciseStore.exercises.find(e => e.id === cardioExerciseId.value)
+    if (fromStore && fromStore.type === 'cardio') return fromStore as CardioExercise
+    const fromPreset = PRESET_EXERCISES.find(e => e.id === cardioExerciseId.value)
+    if (fromPreset && fromPreset.type === 'cardio') return fromPreset as CardioExercise
+    return null
+})
+
+const cardioSessionHistory = computed(() => {
+    if (!session.value || !cardioExerciseId.value) return []
+    const workoutId = session.value.workoutId
+    return sessionStore.allSessions
+        .filter(s => s.workoutId === workoutId)
+        .slice(0, 11) // current + up to 10 previous
+})
+
+const prevCardioSession = computed(() => {
+    if (!session.value) return null
+    const idx = cardioSessionHistory.value.findIndex(s => s.id === session.value!.id)
+    return cardioSessionHistory.value[idx + 1] ?? null
+})
+
+function cardioMetricLabel(metric?: string): string {
+    if (metric === 'speed') return 'km/h'
+    if (metric === 'intensity') return '%'
+    return ''
+}
+
+function cardioDurationFormatted(secs?: number): string {
+    if (!secs) return '—'
+    const h = Math.floor(secs / 3600)
+    const m = Math.floor((secs % 3600) / 60)
+    const s = secs % 60
+    if (h > 0) return `${h}:${String(m).padStart(2, '0')} h`
+    if (m > 0 && s > 0) return `${m} min ${s}s`
+    if (m > 0) return `${m} min`
+    return `${s}s`
+}
 
 const workout = computed(() =>
     session.value ? workoutStore.allWorkouts.find(w => w.id === session.value!.workoutId) : undefined
@@ -443,6 +497,135 @@ async function downloadShare() {
         </div>
 
         <template v-else>
+            <!-- Cardio-only session (from standalone cardio exercise) -->
+            <template v-if="isCardioOnlySession">
+                <!-- Header -->
+                <div class="flex items-center gap-3">
+                    <div class="min-w-0 flex-1">
+                        <p class="text-xs text-text-muted uppercase tracking-wide font-medium mb-0.5">Cardio</p>
+                        <h1 class="text-xl font-semibold truncate">
+                            {{ session.exercises[0]?.exerciseName ?? cardioExerciseDef?.name ?? 'Cardio' }}
+                        </h1>
+                        <p class="text-sm text-text-muted mt-0.5">{{ formatDate(session.date) }}</p>
+                    </div>
+                </div>
+
+                <!-- Main stats -->
+                <div class="bg-card border border-border rounded-2xl p-5 space-y-4">
+                    <div class="grid gap-4" :class="session.exercises[0]?.metricValue != null ? 'grid-cols-2' : 'grid-cols-1'">
+                        <!-- Duration -->
+                        <div class="space-y-1">
+                            <div class="text-xs text-text-muted font-medium">Dauer</div>
+                            <div class="text-3xl font-semibold tabular-nums">
+                                {{ cardioDurationFormatted(session.exercises[0]?.duration) }}
+                            </div>
+                            <template v-if="prevCardioSession">
+                                <div class="text-xs text-text-muted">
+                                    Zuletzt:
+                                    {{ cardioDurationFormatted(prevCardioSession.exercises[0]?.duration) }}
+                                </div>
+                                <div
+                                    v-if="prevCardioSession.exercises[0]?.duration && session.exercises[0]?.duration"
+                                    class="text-xs font-medium"
+                                    :class="session.exercises[0].duration >= prevCardioSession.exercises[0].duration ? 'text-green-400' : 'text-red-400'"
+                                >
+                                    {{ session.exercises[0].duration >= prevCardioSession.exercises[0].duration ? '+' : '' }}{{
+                                        Math.round(((session.exercises[0].duration - prevCardioSession.exercises[0].duration) / prevCardioSession.exercises[0].duration) * 100)
+                                    }}%
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- Metric -->
+                        <div v-if="session.exercises[0]?.metricValue != null" class="space-y-1">
+                            <div class="text-xs text-text-muted font-medium">
+                                {{ cardioExerciseDef?.metric === 'speed' ? 'Tempo' : cardioExerciseDef?.metric === 'intensity' ? 'Intensität' : 'Wert' }}
+                            </div>
+                            <div class="text-3xl font-semibold tabular-nums">
+                                {{ session.exercises[0].metricValue }}
+                                <span class="text-base font-normal text-text-muted">{{ cardioMetricLabel(cardioExerciseDef?.metric) }}</span>
+                            </div>
+                            <template v-if="prevCardioSession?.exercises[0]?.metricValue != null">
+                                <div class="text-xs text-text-muted">
+                                    Zuletzt: {{ prevCardioSession.exercises[0].metricValue }}{{ cardioMetricLabel(cardioExerciseDef?.metric) }}
+                                </div>
+                                <div
+                                    class="text-xs font-medium"
+                                    :class="session.exercises[0].metricValue >= prevCardioSession.exercises[0].metricValue ? 'text-green-400' : 'text-red-400'"
+                                >
+                                    {{ session.exercises[0].metricValue >= prevCardioSession.exercises[0].metricValue ? '+' : '' }}{{
+                                        Math.round(((session.exercises[0].metricValue - prevCardioSession.exercises[0].metricValue) / prevCardioSession.exercises[0].metricValue) * 100)
+                                    }}%
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Overall comparison vs prev -->
+                    <template v-if="prevCardioSession">
+                        <div class="pt-3 border-t border-border">
+                            <div
+                                v-if="session.exercises[0]?.duration && session.exercises[0]?.metricValue && prevCardioSession.exercises[0]?.duration && prevCardioSession.exercises[0]?.metricValue"
+                                class="text-xs text-text-muted"
+                            >
+                                Gesamtleistung vs. letzte Session:
+                                <span class="font-medium" :class="
+                                    (session.exercises[0].duration * session.exercises[0].metricValue) >= (prevCardioSession.exercises[0].duration * prevCardioSession.exercises[0].metricValue)
+                                        ? 'text-green-400' : 'text-red-400'
+                                ">
+                                    {{
+                                        (session.exercises[0].duration * session.exercises[0].metricValue) >= (prevCardioSession.exercises[0].duration * prevCardioSession.exercises[0].metricValue) ? '+' : ''
+                                    }}{{
+                                        Math.round((((session.exercises[0].duration * session.exercises[0].metricValue) - (prevCardioSession.exercises[0].duration * prevCardioSession.exercises[0].metricValue)) / (prevCardioSession.exercises[0].duration * prevCardioSession.exercises[0].metricValue)) * 100)
+                                    }}%
+                                </span>
+                            </div>
+                            <div v-else-if="session.exercises[0]?.duration && prevCardioSession.exercises[0]?.duration" class="text-xs text-text-muted">
+                                Dauer vs. letzte Session:
+                                <span class="font-medium" :class="session.exercises[0].duration >= prevCardioSession.exercises[0].duration ? 'text-green-400' : 'text-red-400'">
+                                    {{ session.exercises[0].duration >= prevCardioSession.exercises[0].duration ? '+' : '' }}{{
+                                        Math.round(((session.exercises[0].duration - prevCardioSession.exercises[0].duration) / prevCardioSession.exercises[0].duration) * 100)
+                                    }}%
+                                </span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- History -->
+                <div v-if="cardioSessionHistory.length > 1" class="bg-card border border-border rounded-2xl p-4 space-y-3">
+                    <h2 class="font-medium text-sm">Verlauf</h2>
+                    <div class="space-y-0">
+                        <div
+                            v-for="s in cardioSessionHistory.slice(0, 8)"
+                            :key="s.id"
+                            class="flex items-center gap-3 py-2.5 border-b border-border/50 last:border-0"
+                            :class="s.id === sessionId ? 'opacity-100' : 'opacity-70'"
+                        >
+                            <div class="w-1.5 h-1.5 rounded-full shrink-0" :class="s.id === sessionId ? 'bg-primary-500' : 'bg-border'" />
+                            <div class="text-xs text-text-muted w-24 shrink-0">
+                                {{ new Date(s.date).toLocaleDateString('de-DE', { day: '2-digit', month: 'short' }) }}
+                            </div>
+                            <div class="font-medium text-sm tabular-nums">
+                                {{ cardioDurationFormatted(s.exercises[0]?.duration) }}
+                            </div>
+                            <div v-if="s.exercises[0]?.metricValue != null" class="text-sm text-text-muted tabular-nums ml-auto">
+                                {{ s.exercises[0].metricValue }}{{ cardioMetricLabel(cardioExerciseDef?.metric) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Note -->
+                <div v-if="session.exercises[0]?.note"
+                    class="flex items-start gap-2 bg-surface border border-border rounded-xl px-3 py-2.5 text-sm text-text-muted">
+                    <IconNotebookPen class="size-3.5 shrink-0 mt-0.5 text-primary-400" />
+                    <span class="leading-snug">{{ session.exercises[0].note }}</span>
+                </div>
+            </template>
+
+            <!-- Standard session view -->
+            <template v-else>
             <!-- Header -->
             <div class="flex items-center gap-3">
                 <div class="min-w-0 flex-1">
@@ -799,6 +982,7 @@ async function downloadShare() {
                     </div>
                 </div>
             </div>
+            </template> <!-- end standard session view -->
         </template>
     </div>
 

@@ -24,6 +24,25 @@ function workoutName(workoutId: string, sessionIndex: number): string {
         ?? 'Unbekanntes Workout'
 }
 
+function isCardioOnly(workoutId: string): boolean {
+    return workoutId.startsWith('exercise:')
+}
+
+function cardioDisplay(session: (typeof sessionStore.allSessions)[0]): { duration: string; metric: string | null } {
+    const ex = session.exercises[0]
+    const secs = ex?.duration ?? 0
+    const m = Math.floor(secs / 60)
+    const s = secs % 60
+    let duration = '—'
+    if (secs > 0) {
+        if (m > 0 && s > 0) duration = `${m} min ${s}s`
+        else if (m > 0) duration = `${m} min`
+        else duration = `${s}s`
+    }
+    const metric = ex?.metricValue != null ? String(ex.metricValue) : null
+    return { duration, metric }
+}
+
 // Für jede Session: Map exerciseId → letzte vorherige Instanz dieser Übung
 const sessionMetrics = computed(() =>
     sessionStore.allSessions.map((session, i) => {
@@ -119,7 +138,27 @@ function metricColor(m: SessionMetrics): string {
         <div v-else class="space-y-3">
             <NuxtLink v-for="(session, i) in sessionStore.allSessions" :key="session.id" :to="`/sessions/${session.id}`"
                 class="block bg-card border border-border rounded-2xl p-4 hover:border-surface-hover transition-colors">
-                <template v-if="sessionMetrics[i]">
+                <!-- Cardio-only session -->
+                <template v-if="isCardioOnly(session.workoutId)">
+                    <div class="flex justify-between items-start gap-3">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-1.5">
+                                <IconHeartPulse class="size-3.5 shrink-0 text-primary-400" />
+                                <div class="font-semibold text-sm truncate">{{ workoutName(session.workoutId, i) }}</div>
+                            </div>
+                            <div class="text-xs text-text-muted mt-0.5">{{ formatDate(session.date) }}</div>
+                        </div>
+                        <div class="shrink-0 text-right">
+                            <div class="text-sm font-semibold tabular-nums">{{ cardioDisplay(session).duration }}</div>
+                            <div v-if="cardioDisplay(session).metric" class="text-xs text-text-muted tabular-nums">
+                                {{ cardioDisplay(session).metric }}
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Standard session -->
+                <template v-else-if="sessionMetrics[i]">
                     <div class="flex justify-between items-start gap-3">
                         <div class="min-w-0">
                             <div class="font-semibold text-sm truncate">{{ workoutName(session.workoutId, i) }}</div>
