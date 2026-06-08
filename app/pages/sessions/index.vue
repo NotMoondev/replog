@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { useSessionStore } from '~/stores/useSessionStore'
-import { computeVolume, computeRepsVolume, computeCardioScore } from '~/utils/metrics'
+import { computeSessionScore } from '~/utils/metrics'
 import { useWorkoutStore } from '~/stores/useWorkoutStore'
 import { useFormatters } from '~/composables/useFormatters'
+import type { WorkoutSessionExercise } from '~/types/session'
 
 const sessionStore = useSessionStore()
 const workoutStore = useWorkoutStore()
@@ -21,41 +22,37 @@ function workoutName(workoutId: string, sessionIndex: number): string {
         ?? 'Unbekanntes Workout'
 }
 
+// Für jede Session: Map exerciseId → letzte vorherige Instanz dieser Übung
+const sessionScores = computed(() =>
+    sessionStore.allSessions.map((session, i) => {
+        const prevMap = new Map<string, WorkoutSessionExercise>()
+        const olderSessions = sessionStore.allSessions.slice(i + 1)
 
-function volumeDelta(sessionIndex: number): { value: number; percent: number; label: string } | null {
-    const session = sessionStore.allSessions[sessionIndex]
-    if (!session) return null
+        for (const ex of session.exercises) {
+            for (const older of olderSessions) {
+                const found = older.exercises.find(e => e.exerciseId === ex.exerciseId)
+                if (found) { prevMap.set(ex.exerciseId, found); break }
+            }
+        }
 
-    const prevSession = sessionStore.allSessions
-        .slice(sessionIndex + 1)
-        .find(s => s.workoutId === session.workoutId)
-    if (!prevSession) return null
+        return computeSessionScore(session.exercises, prevMap)
+    })
+)
 
-    // 1. Weighted volume (priority)
-    const currentVol = computeVolume(session.exercises)
-    const prevVol = computeVolume(prevSession.exercises)
-    if (currentVol > 0 && prevVol > 0) {
-        const diff = currentVol - prevVol
-        return { value: diff, percent: Math.round((diff / prevVol) * 100), label: 'Volumen' }
-    }
+function scoreColor(score: number): string {
+    if (score >= 85) return 'text-green-400'
+    if (score >= 70) return 'text-teal-400'
+    if (score >= 55) return 'text-sky-400'
+    if (score >= 40) return 'text-amber-400'
+    return 'text-red-400'
+}
 
-    // 2. Cardio score
-    const currentCardio = computeCardioScore(session.exercises)
-    const prevCardio = computeCardioScore(prevSession.exercises)
-    if (currentCardio > 0 && prevCardio > 0) {
-        const diff = currentCardio - prevCardio
-        return { value: diff, percent: Math.round((diff / prevCardio) * 100), label: 'Cardio' }
-    }
-
-    // 3. Bodyweight reps
-    const currentReps = computeRepsVolume(session.exercises)
-    const prevReps = computeRepsVolume(prevSession.exercises)
-    if (currentReps > 0 && prevReps > 0) {
-        const diff = currentReps - prevReps
-        return { value: diff, percent: Math.round((diff / prevReps) * 100), label: 'Reps' }
-    }
-
-    return null
+function scoreZoneLabel(score: number): string {
+    if (score >= 85) return 'Sehr stark'
+    if (score >= 70) return 'Gut'
+    if (score >= 55) return 'Solide'
+    if (score >= 40) return 'Okay'
+    return 'Schwach'
 }
 </script>
 
@@ -68,43 +65,40 @@ function volumeDelta(sessionIndex: number): { value: number; percent: number; la
         </div>
 
         <div v-else class="space-y-3">
-            <NuxtLink
-                v-for="(session, i) in sessionStore.allSessions"
-                :key="session.id"
-                :to="`/sessions/${session.id}`"
-                class="block bg-card border border-border rounded-2xl p-4 hover:border-surface-hover transition-colors"
-            >
-                <div class="flex justify-between items-start gap-3">
-                    <div class="min-w-0">
-                        <div class="font-semibold text-sm truncate">{{ workoutName(session.workoutId, i) }}</div>
-                        <div class="text-xs text-text-muted mt-0.5 flex items-center gap-2">
-                            <span>{{ formatDate(session.date) }}</span>
-                            <span v-if="formatDuration(session.durationSeconds)" class="flex items-center gap-1">
-                                <IconClock class="size-3" />
-                                {{ formatDuration(session.durationSeconds) }}
-                            </span>
+            <NuxtLink v-for="(session, i) in sessionStore.allSessions" :key="session.id" :to="`/sessions/${session.id}`"
+                class="block bg-card border border-border rounded-2xl p-4 hover:border-surface-hover transition-colors">
+                <template v-if="sessionScores[i]">
+                    <div class="flex justify-between items-start gap-3">
+                        <div class="min-w-0">
+                            <div class="font-semibold text-sm truncate">{{ workoutName(session.workoutId, i) }}</div>
+                            <div class="text-xs text-text-muted mt-0.5 flex items-center gap-2">
+                                <span>{{ formatDate(session.date) }}</span>
+                                <span v-if="formatDuration(session.durationSeconds)" class="flex items-center gap-1">
+                                    <IconClock class="size-3" />
+                                    {{ formatDuration(session.durationSeconds) }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="shrink-0 text-right">
+                            <template v-if="sessionScores[i]">
+                                <span class="text-sm font-semibold" :class="scoreColor(sessionScores[i].score)">
+                                    {{ sessionScores[i].score }}
+                                </span>
+                                <div class="text-xs" :class="scoreColor(sessionScores[i].score)">
+                                    {{ scoreZoneLabel(sessionScores[i].score) }}
+                                </div>
+                            </template>
+                            <template v-else>
+                                <span class="text-sm text-text-muted">—</span>
+                            </template>
                         </div>
                     </div>
 
-                    <div class="shrink-0 text-right">
-                        <template v-if="volumeDelta(i) !== null">
-                            <span
-                                class="text-sm font-semibold"
-                                :class="volumeDelta(i)!.percent >= 0 ? 'text-green-400' : 'text-red-400'"
-                            >
-                                {{ volumeDelta(i)!.percent >= 0 ? '+' : '' }}{{ volumeDelta(i)!.percent }}%
-                            </span>
-                            <div class="text-xs text-text-muted">{{ volumeDelta(i)!.label }}</div>
-                        </template>
-                        <template v-else>
-                            <span class="text-sm text-text-muted">—</span>
-                        </template>
+                    <div class="mt-2 text-xs text-text-muted">
+                        {{ session.exercises.length }} Übungen
                     </div>
-                </div>
-
-                <div class="mt-2 text-xs text-text-muted">
-                    {{ session.exercises.length }} Übungen
-                </div>
+                </template>
             </NuxtLink>
 
             <div v-if="sessionStore.allSessions.length === 0" class="text-center py-16 space-y-2">

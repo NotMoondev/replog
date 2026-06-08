@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { toPng } from 'html-to-image'
 import { useSessionStore } from '~/stores/useSessionStore'
-import { computeVolume, computeRepsVolume, computeCardioScore, computeCardioDuration } from '~/utils/metrics'
+import {
+    computeVolume, computeRepsVolume, computeCardioScore, computeCardioDuration,
+    computeProgressiveOverload, computeRelativeIntensity, computeSessionScore,
+} from '~/utils/metrics'
 import { useWorkoutStore } from '~/stores/useWorkoutStore'
 import type { WorkoutSessionExercise } from '~/types/session'
 import type { CardioExercise, MuscleGroup } from '~/types/workout'
@@ -63,6 +66,66 @@ const prevCardioDuration = computed(() => prevSession.value ? computeCardioDurat
 const hasWeightedExercises = computed(() => currentVolume.value > 0)
 const hasBodyweightExercises = computed(() => currentRepsVolume.value > 0)
 const hasCardioExercises = computed(() => currentCardioScore.value > 0)
+
+// Metric Switcher
+type MetricMode = 'session' | 'overload' | 'volume' | 'intensity'
+const activeMetric = ref<MetricMode>('session')
+
+const metricChips: { label: string; value: MetricMode }[] = [
+    { label: 'Trainingsscore', value: 'session' },
+    { label: 'Progressive Overload', value: 'overload' },
+    { label: 'Gesamtvolumen', value: 'volume' },
+    { label: 'Rel. Intensität', value: 'intensity' },
+]
+
+// Map exerciseId → letzte bekannte Session dieser Übung (cross-workout)
+const prevExerciseMap = computed(() => {
+    const map = new Map<string, WorkoutSessionExercise>()
+    if (!session.value) return map
+    for (const ex of session.value.exercises) {
+        const prev = getLastExercise(ex.exerciseId)
+        if (prev) map.set(ex.exerciseId, prev)
+    }
+    return map
+})
+
+const progressiveOverload = computed(() =>
+    session.value
+        ? computeProgressiveOverload(session.value.exercises, prevExerciseMap.value)
+        : { score: 0, improvedCount: 0, totalTrackedCount: 0, newCount: 0, avgDeltaPercent: null }
+)
+
+const relativeIntensity = computed(() =>
+    session.value
+        ? computeRelativeIntensity(session.value.exercises)
+        : { avgPercent: 0, exerciseCount: 0 }
+)
+
+const sessionScore = computed(() =>
+    session.value
+        ? computeSessionScore(session.value.exercises, prevExerciseMap.value)
+        : { score: 0, comparedCount: 0, baselineCount: 0, avgDeltaPercent: null }
+)
+
+function scoreZone(score: number): { label: string; color: string } {
+    if (score >= 85) return { label: 'Sehr stark', color: 'text-green-400' }
+    if (score >= 70) return { label: 'Gut', color: 'text-teal-400' }
+    if (score >= 55) return { label: 'Solide', color: 'text-sky-400' }
+    if (score >= 40) return { label: 'Okay', color: 'text-amber-400' }
+    return { label: 'Schwach', color: 'text-red-400' }
+}
+
+function intensityZone(pct: number): { label: string; color: string } {
+    if (pct < 60) return { label: 'Sehr leicht', color: 'text-sky-400' }
+    if (pct < 70) return { label: 'Leicht', color: 'text-teal-400' }
+    if (pct < 85) return { label: 'Hypertrophie', color: 'text-green-400' }
+    if (pct < 95) return { label: 'Kraft', color: 'text-amber-400' }
+    return { label: 'Max-Kraft', color: 'text-red-400' }
+}
+
+const hasAnyExercises = computed(() =>
+    hasWeightedExercises.value || hasBodyweightExercises.value || hasCardioExercises.value
+)
 
 function exerciseName(ex: WorkoutSessionExercise): string {
     return workout.value?.exercises.find(e => e.id === ex.exerciseId)?.name
@@ -132,12 +195,37 @@ function setComparison(ex: WorkoutSessionExercise, setIndex: number): { label: s
             dir: diff > 0 ? 'better' : diff < 0 ? 'worse' : 'same',
         }
     } else {
-        // Compare weight
-        const cur = curSet.weight ?? 0
-        const prev = lastSet.weight ?? 0
+        // Compare both weight and reps
+        const curWeight = curSet.weight ?? 0
+        const prevWeight = lastSet.weight ?? 0
+        const curReps = curSet.reps ?? 0
+        const prevReps = lastSet.reps ?? 0
+
+        const weightDiff = curWeight - prevWeight
+        const repsDiff = curReps - prevReps
+
+        // Determine overall direction via volume (weight × reps)
+        const curVol = curWeight > 0 ? curWeight * curReps : curReps
+        const prevVol = prevWeight > 0 ? prevWeight * prevReps : prevReps
+
+        let label = ''
+        if (prevWeight > 0) {
+            const weightPart = weightDiff !== 0
+                ? `${weightDiff > 0 ? '+' : ''}${weightDiff} kg`
+                : `${prevWeight} kg`
+            const repsPart = repsDiff !== 0
+                ? `${repsDiff > 0 ? '+' : ''}${repsDiff} Reps`
+                : `${prevReps} Reps`
+            label = `${weightPart} · ${repsPart}`
+        } else {
+            label = repsDiff !== 0
+                ? `${repsDiff > 0 ? '+' : ''}${repsDiff} Reps`
+                : `${prevReps} Reps`
+        }
+
         return {
-            label: prev > 0 ? `${prev} kg` : '—',
-            dir: cur > prev ? 'better' : cur < prev ? 'worse' : 'same',
+            label,
+            dir: curVol > prevVol ? 'better' : curVol < prevVol ? 'worse' : 'same',
         }
     }
 }
@@ -163,6 +251,36 @@ function formatDuration(seconds?: number): string | null {
     const s = seconds % 60
     if (m === 0) return `${s}s`
     return s > 0 ? `${m} min ${s}s` : `${m} min`
+}
+
+function cardioComparison(
+    ex: WorkoutSessionExercise,
+) {
+
+    const prev = getLastExercise(ex.exerciseId)
+
+    if (!prev)
+        return null
+
+    const curScore =
+        (ex.duration ?? 0) *
+        Math.max(ex.metricValue ?? 1, 1)
+
+    const prevScore =
+        (prev.duration ?? 0) *
+        Math.max(prev.metricValue ?? 1, 1)
+
+    if (prevScore === 0)
+        return null
+
+    const delta =
+        ((curScore - prevScore) / prevScore) * 100
+
+    return {
+        delta: Math.round(delta),
+        better: delta > 0,
+        worse: delta < 0,
+    }
 }
 
 // Muscle group breakdown
@@ -345,30 +463,123 @@ async function downloadShare() {
                 </button>
             </div>
 
-            <!-- Weighted volume card -->
-            <div v-if="hasWeightedExercises" class="bg-card border border-border rounded-2xl p-4 space-y-3">
-                <h2 class="font-medium text-sm">Gesamtvolumen</h2>
-                <div class="flex items-end gap-4">
-                    <div>
-                        <div class="text-2xl font-semibold">{{ currentVolume.toLocaleString('de-DE') }} kg</div>
-                        <div class="text-xs text-text-muted mt-0.5">Diese Session</div>
-                    </div>
-                    <template v-if="prevSession && prevVolume > 0">
-                        <div class="text-text-muted mb-1">vs.</div>
+            <!-- Metric card mit Chip-Switcher -->
+            <div v-if="hasAnyExercises" class="bg-card border border-border rounded-2xl p-4 space-y-3">
+                <!-- Chips -->
+                <div class="flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 pb-0.5">
+                    <button v-for="chip in metricChips" :key="chip.value" @click="activeMetric = chip.value"
+                        class="shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors" :class="activeMetric === chip.value
+                            ? 'bg-primary-500 text-white'
+                            : 'bg-surface text-text-muted border border-border hover:bg-surface-hover'">
+                        {{ chip.label }}
+                    </button>
+                </div>
+
+                <!-- Trainingsscore -->
+                <template v-if="activeMetric === 'session'">
+                    <div class="flex items-end gap-4">
                         <div>
-                            <div class="text-lg font-medium text-text-muted">{{ prevVolume.toLocaleString('de-DE') }} kg
+                            <div class="text-2xl font-semibold">
+                                {{ sessionScore.score }}<span class="text-sm text-text-muted font-normal">/100</span>
                             </div>
-                            <div class="text-xs text-text-muted mt-0.5">Letzte Session</div>
+                            <div class="text-xs text-text-muted mt-0.5">Trainingsscore</div>
                         </div>
-                        <div v-if="volumeDeltaPercent !== null" class="ml-auto">
-                            <span class="text-lg font-semibold"
-                                :class="volumeDeltaPercent >= 0 ? 'text-green-400' : 'text-red-400'">
-                                {{ volumeDeltaPercent >= 0 ? '+' : '' }}{{ volumeDeltaPercent }}%
+                        <div class="ml-auto flex flex-col items-end gap-0.5">
+                            <span class="text-sm font-semibold" :class="scoreZone(sessionScore.score).color">
+                                {{ scoreZone(sessionScore.score).label }}
+                            </span>
+                            <span class="text-xs text-text-muted">
+                                {{ sessionScore.comparedCount }} verglichen
+                                <template v-if="sessionScore.baselineCount > 0">
+                                    · {{ sessionScore.baselineCount }} neu
+                                </template>
                             </span>
                         </div>
-                    </template>
-                    <div v-else class="text-xs text-text-muted self-center">Erste Session für dieses Workout</div>
-                </div>
+                    </div>
+                    <p v-if="sessionScore.avgDeltaPercent !== null" class="text-xs text-text-muted">
+                        ∅ <span :class="sessionScore.avgDeltaPercent >= 0 ? 'text-green-400' : 'text-red-400'">
+                            {{ sessionScore.avgDeltaPercent >= 0 ? '+' : '' }}{{ sessionScore.avgDeltaPercent }}%
+                        </span> gegenüber letzter Session
+                    </p>
+                    <p v-else-if="sessionScore.comparedCount === 0" class="text-xs text-text-muted">
+                        Erste Session, Score basiert auf Trainingsintensität.
+                    </p>
+                </template>
+
+                <!-- Progressive Overload -->
+                <template v-if="activeMetric === 'overload'">
+                    <div v-if="progressiveOverload.totalTrackedCount === 0 && progressiveOverload.newCount > 0"
+                        class="text-sm text-text-muted py-1">
+                        Erste Session, noch kein Verlauf zum Vergleich.
+                    </div>
+                    <div v-else class="flex items-end gap-4">
+                        <div>
+                            <div class="text-2xl font-semibold">
+                                {{ progressiveOverload.improvedCount }}<span class="text-text-muted">/{{
+                                    progressiveOverload.totalTrackedCount }}</span>
+                            </div>
+                            <div class="text-xs text-text-muted mt-0.5">Übungen verbessert</div>
+                        </div>
+                        <div v-if="progressiveOverload.avgDeltaPercent !== null"
+                            class="ml-auto flex flex-col items-end">
+                            <span class="text-lg font-semibold"
+                                :class="progressiveOverload.avgDeltaPercent >= 0 ? 'text-green-400' : 'text-red-400'">
+                                {{ progressiveOverload.avgDeltaPercent >= 0 ? '+' : '' }}{{
+                                    progressiveOverload.avgDeltaPercent }}%
+                            </span>
+                            <span class="text-xs text-text-muted">∅ 1RM-Änderung</span>
+                        </div>
+                    </div>
+                    <p v-if="progressiveOverload.newCount > 0" class="text-xs text-text-muted">
+                        {{ progressiveOverload.newCount }}
+                        {{ progressiveOverload.newCount === 1 ? 'neue Übung' : 'neue Übungen' }} ohne Verlauf
+                    </p>
+                </template>
+
+                <!-- Gesamtvolumen -->
+                <template v-else-if="activeMetric === 'volume'">
+                    <div class="flex items-end gap-4">
+                        <div>
+                            <div class="text-2xl font-semibold">{{ currentVolume.toLocaleString('de-DE') }} kg</div>
+                            <div class="text-xs text-text-muted mt-0.5">Diese Session</div>
+                        </div>
+                        <template v-if="prevSession && prevVolume > 0">
+                            <div class="text-text-muted mb-1">vs.</div>
+                            <div>
+                                <div class="text-lg font-medium text-text-muted">{{ prevVolume.toLocaleString('de-DE')
+                                    }} kg</div>
+                                <div class="text-xs text-text-muted mt-0.5">Letzte Session</div>
+                            </div>
+                            <div v-if="volumeDeltaPercent !== null" class="ml-auto">
+                                <span class="text-lg font-semibold"
+                                    :class="volumeDeltaPercent >= 0 ? 'text-green-400' : 'text-red-400'">
+                                    {{ volumeDeltaPercent >= 0 ? '+' : '' }}{{ volumeDeltaPercent }}%
+                                </span>
+                            </div>
+                        </template>
+                        <div v-else class="text-xs text-text-muted self-center">Erste Session für dieses Workout</div>
+                    </div>
+                </template>
+
+                <!-- Relative Intensität -->
+                <template v-else-if="activeMetric === 'intensity'">
+                    <div v-if="relativeIntensity.exerciseCount === 0" class="text-sm text-text-muted py-1">
+                        Keine gewichteten Übungen in dieser Session.
+                    </div>
+                    <div v-else class="flex items-end gap-4">
+                        <div>
+                            <div class="text-2xl font-semibold">{{ relativeIntensity.avgPercent }}%</div>
+                            <div class="text-xs text-text-muted mt-0.5">∅ relative Intensität</div>
+                        </div>
+                        <div class="ml-auto flex flex-col items-end gap-0.5">
+                            <span class="text-sm font-semibold"
+                                :class="intensityZone(relativeIntensity.avgPercent).color">
+                                {{ intensityZone(relativeIntensity.avgPercent).label }}
+                            </span>
+                            <span class="text-xs text-text-muted">{{ relativeIntensity.exerciseCount }} Übungen</span>
+                        </div>
+                    </div>
+                </template>
             </div>
 
             <!-- Bodyweight reps card -->
@@ -474,11 +685,12 @@ async function downloadShare() {
                                 <span class="text-center text-primary-400">vs. letzte</span>
                             </div>
                             <!-- reps+weight header -->
-                            <div v-else class="grid grid-cols-4 text-xs text-text-muted mb-2 px-1">
+                            <div v-else class="grid text-xs text-text-muted mb-2 px-1"
+                                style="grid-template-columns: 1.5rem 1fr 1fr 1.4fr">
                                 <span>Satz</span>
                                 <span class="text-center">Reps</span>
-                                <span class="text-center">{{ isBodyweight(ex) ? '—' : 'Gewicht' }}</span>
-                                <span class="text-center text-primary-400">vs. letzte</span>
+                                <span class="text-center">Gewicht</span>
+                                <span class="text-right text-primary-400">vs. letzte</span>
                             </div>
 
                             <!-- time-mode rows -->
@@ -521,13 +733,14 @@ async function downloadShare() {
                             <!-- reps+weight rows (default) -->
                             <template v-else>
                                 <div v-for="(set, i) in ex.sets" :key="i"
-                                    class="grid grid-cols-4 text-sm py-1.5 px-1 rounded-lg even:bg-surface/40">
+                                    class="grid text-sm py-1.5 px-1 rounded-lg even:bg-surface/40"
+                                    style="grid-template-columns: 1.5rem 1fr 1fr 1.4fr">
                                     <span class="text-text-muted">{{ i + 1 }}</span>
                                     <span class="text-center font-medium">{{ set.reps ?? '—' }}</span>
                                     <span class="text-center font-medium">
                                         {{ set.weight != null && set.weight > 0 ? `${set.weight} kg` : '—' }}
                                     </span>
-                                    <span class="text-center text-xs">
+                                    <span class="text-right text-xs leading-snug">
                                         <template v-if="setComparison(ex, i)">
                                             <span
                                                 :class="setComparison(ex, i)!.dir === 'better' ? 'text-green-400' : setComparison(ex, i)!.dir === 'worse' ? 'text-red-400' : 'text-text-muted'">
@@ -543,17 +756,39 @@ async function downloadShare() {
 
                     <!-- Cardio -->
                     <template v-else>
-                        <div class="flex gap-4 text-sm">
-                            <div v-if="ex.duration != null">
-                                <div class="font-medium">{{ Math.floor(ex.duration / 60) }}:{{ String(ex.duration %
-                                    60).padStart(2, '0') }}</div>
-                                <div class="text-xs text-text-muted">Dauer</div>
+                        <div class="space-y-3">
+                            <div class="flex gap-4 text-sm">
+                                <div v-if="ex.duration != null">
+                                    <div class="font-medium">
+                                        {{ Math.floor(ex.duration / 60) }}:{{
+                                            String(ex.duration % 60).padStart(2, '0')
+                                        }}
+                                    </div>
+                                    <div class="text-xs text-text-muted">
+                                        Dauer
+                                    </div>
+                                </div>
+
+                                <div v-if="ex.metricValue != null">
+                                    <div class="font-medium">
+                                        {{ ex.metricValue }}
+                                    </div>
+                                    <div class="text-xs text-text-muted">
+                                        Wert
+                                    </div>
+                                </div>
                             </div>
-                            <div v-if="ex.metricValue != null">
-                                <div class="font-medium">{{ ex.metricValue }}</div>
-                                <div class="text-xs text-text-muted">Wert</div>
+
+                            <div v-if="cardioComparison(ex)" class="text-xs">
+                                <span :class="cardioComparison(ex)!.better ? 'text-green-400' : cardioComparison(ex)!.worse ? 'text-red-400' : 'text-text-muted'">
+                                    {{ cardioComparison(ex)!.delta > 0 ? '+' : '' }}
+                                    {{ cardioComparison(ex)!.delta }}%
+                                    vs. letzte Session
+                                </span>
                             </div>
+
                         </div>
+
                     </template>
 
                     <!-- Note -->
