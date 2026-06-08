@@ -1,6 +1,11 @@
 <script setup lang="ts">
 const { initTheme } = useTheme()
-onMounted(() => initTheme())
+onMounted(async () => {
+    initTheme()
+    if (navigator.storage?.persist) {
+        await navigator.storage.persist()
+    }
+})
 
 useHead({
     title: 'REPLOG',
