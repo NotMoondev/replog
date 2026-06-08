@@ -8,6 +8,8 @@ import {
 import { useWorkoutStore } from '~/stores/useWorkoutStore'
 import type { WorkoutSessionExercise } from '~/types/session'
 import type { CardioExercise, MuscleGroup } from '~/types/workout'
+import { usePreferredMetric, METRIC_OPTIONS } from '~/composables/usePreferredMetric'
+import type { MetricMode } from '~/composables/usePreferredMetric'
 
 const route = useRoute()
 const sessionStore = useSessionStore()
@@ -68,15 +70,13 @@ const hasBodyweightExercises = computed(() => currentRepsVolume.value > 0)
 const hasCardioExercises = computed(() => currentCardioScore.value > 0)
 
 // Metric Switcher
-type MetricMode = 'session' | 'overload' | 'volume' | 'intensity'
-const activeMetric = ref<MetricMode>('session')
+const { preferred: preferredMetric } = usePreferredMetric()
+const activeMetric = ref<MetricMode>(preferredMetric.value)
 
-const metricChips: { label: string; value: MetricMode }[] = [
-    { label: 'Trainingsscore', value: 'session' },
-    { label: 'Progressive Overload', value: 'overload' },
-    { label: 'Gesamtvolumen', value: 'volume' },
-    { label: 'Rel. Intensität', value: 'intensity' },
-]
+const metricChips = computed(() => [
+    ...METRIC_OPTIONS.filter(c => c.value === preferredMetric.value),
+    ...METRIC_OPTIONS.filter(c => c.value !== preferredMetric.value),
+])
 
 // Map exerciseId → letzte bekannte Session dieser Übung (cross-workout)
 const prevExerciseMap = computed(() => {

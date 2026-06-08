@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { useSessionStore } from '~/stores/useSessionStore'
-import { computeSessionScore } from '~/utils/metrics'
+import { computeSessionScore, computeVolume, computeProgressiveOverload, computeRelativeIntensity } from '~/utils/metrics'
 import { useWorkoutStore } from '~/stores/useWorkoutStore'
 import { useFormatters } from '~/composables/useFormatters'
+import { usePreferredMetric } from '~/composables/usePreferredMetric'
 import type { WorkoutSessionExercise } from '~/types/session'
 
 const sessionStore = useSessionStore()
 const workoutStore = useWorkoutStore()
-const { formatDate, formatDuration } = useFormatters()
+const { formatDate, formatDuration, formatVolume } = useFormatters()
+const { preferred } = usePreferredMetric()
 
 onMounted(async () => {
     await Promise.all([
@@ -23,7 +25,7 @@ function workoutName(workoutId: string, sessionIndex: number): string {
 }
 
 // Für jede Session: Map exerciseId → letzte vorherige Instanz dieser Übung
-const sessionScores = computed(() =>
+const sessionMetrics = computed(() =>
     sessionStore.allSessions.map((session, i) => {
         const prevMap = new Map<string, WorkoutSessionExercise>()
         const olderSessions = sessionStore.allSessions.slice(i + 1)
@@ -35,7 +37,12 @@ const sessionScores = computed(() =>
             }
         }
 
-        return computeSessionScore(session.exercises, prevMap)
+        return {
+            session: computeSessionScore(session.exercises, prevMap),
+            volume: computeVolume(session.exercises),
+            overload: computeProgressiveOverload(session.exercises, prevMap),
+            intensity: computeRelativeIntensity(session.exercises),
+        }
     })
 )
 
@@ -54,6 +61,51 @@ function scoreZoneLabel(score: number): string {
     if (score >= 40) return 'Okay'
     return 'Schwach'
 }
+
+function intensityZoneLabel(pct: number): string {
+    if (pct < 60) return 'Sehr leicht'
+    if (pct < 70) return 'Leicht'
+    if (pct < 85) return 'Hypertrophie'
+    if (pct < 95) return 'Kraft'
+    return 'Max-Kraft'
+}
+
+type SessionMetrics = ReturnType<typeof sessionMetrics.value>[0]
+
+function metricPrimary(m: SessionMetrics): string {
+    switch (preferred.value) {
+        case 'session': return String(m.session.score)
+        case 'volume': return m.volume > 0 ? formatVolume(m.volume) : '—'
+        case 'overload': return m.overload.totalTrackedCount > 0 ? `${m.overload.score}%` : '–'
+        case 'intensity': return m.intensity.exerciseCount > 0 ? `${m.intensity.avgPercent}%` : '—'
+    }
+}
+
+function metricSecondary(m: SessionMetrics): string {
+    switch (preferred.value) {
+        case 'session': return scoreZoneLabel(m.session.score)
+        case 'volume': return 'Volumen'
+        case 'overload': return m.overload.totalTrackedCount > 0
+            ? `${m.overload.improvedCount}/${m.overload.totalTrackedCount} verbessert`
+            : 'Neue Übungen'
+        case 'intensity': return m.intensity.exerciseCount > 0 ? intensityZoneLabel(m.intensity.avgPercent) : ''
+    }
+}
+
+function metricColor(m: SessionMetrics): string {
+    switch (preferred.value) {
+        case 'session': return scoreColor(m.session.score)
+        case 'volume': return 'text-text'
+        case 'overload': return m.overload.score >= 50 ? 'text-green-400' : m.overload.score > 0 ? 'text-amber-400' : 'text-text-muted'
+        case 'intensity': {
+            const pct = m.intensity.avgPercent
+            if (pct < 70) return 'text-sky-400'
+            if (pct < 85) return 'text-green-400'
+            if (pct < 95) return 'text-amber-400'
+            return 'text-red-400'
+        }
+    }
+}
 </script>
 
 <template>
@@ -67,7 +119,7 @@ function scoreZoneLabel(score: number): string {
         <div v-else class="space-y-3">
             <NuxtLink v-for="(session, i) in sessionStore.allSessions" :key="session.id" :to="`/sessions/${session.id}`"
                 class="block bg-card border border-border rounded-2xl p-4 hover:border-surface-hover transition-colors">
-                <template v-if="sessionScores[i]">
+                <template v-if="sessionMetrics[i]">
                     <div class="flex justify-between items-start gap-3">
                         <div class="min-w-0">
                             <div class="font-semibold text-sm truncate">{{ workoutName(session.workoutId, i) }}</div>
@@ -81,17 +133,12 @@ function scoreZoneLabel(score: number): string {
                         </div>
 
                         <div class="shrink-0 text-right">
-                            <template v-if="sessionScores[i]">
-                                <span class="text-sm font-semibold" :class="scoreColor(sessionScores[i].score)">
-                                    {{ sessionScores[i].score }}
-                                </span>
-                                <div class="text-xs" :class="scoreColor(sessionScores[i].score)">
-                                    {{ scoreZoneLabel(sessionScores[i].score) }}
-                                </div>
-                            </template>
-                            <template v-else>
-                                <span class="text-sm text-text-muted">—</span>
-                            </template>
+                            <span class="text-sm font-semibold" :class="metricColor(sessionMetrics[i])">
+                                {{ metricPrimary(sessionMetrics[i]) }}
+                            </span>
+                            <div class="text-xs" :class="metricColor(sessionMetrics[i])">
+                                {{ metricSecondary(sessionMetrics[i]) }}
+                            </div>
                         </div>
                     </div>
 

@@ -3,9 +3,11 @@ import { ref, computed, onMounted } from 'vue'
 import { useWorkoutStore } from '~/stores/useWorkoutStore'
 import { useTrainingPlanStore } from '~/stores/useTrainingPlanStore'
 import { useSessionStore } from '~/stores/useSessionStore'
-import { computeVolume } from '~/utils/metrics'
+import { computeVolume, computeSessionScore, computeProgressiveOverload, computeRelativeIntensity } from '~/utils/metrics'
 import { useActiveSession } from '~/composables/useActiveSession'
 import { useFormatters } from '~/composables/useFormatters'
+import { usePreferredMetric } from '~/composables/usePreferredMetric'
+import type { WorkoutSessionExercise } from '~/types/session'
 
 const store = useWorkoutStore()
 const planStore = useTrainingPlanStore()
@@ -13,6 +15,7 @@ const sessionStore = useSessionStore()
 const activeSession = useActiveSession()
 const { showConflict, navigateTo, confirmDiscard, confirmResume, cancel: cancelConflict } = activeSession.useConflictGuard()
 const { formatSessionDate, formatVolume } = useFormatters()
+const { preferred } = usePreferredMetric()
 
 const WEEKDAYS_SHORT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 
@@ -66,25 +69,91 @@ function startOfWeek(date: Date): Date {
     d.setHours(0, 0, 0, 0)
     return d
 }
+function buildPrevMap(sessionIndex: number): Map<string, WorkoutSessionExercise> {
+    const map = new Map<string, WorkoutSessionExercise>()
+    const session = sessionStore.allSessions[sessionIndex]
+    if (!session) return map
+    for (const ex of session.exercises) {
+        for (const older of sessionStore.allSessions.slice(sessionIndex + 1)) {
+            const found = older.exercises.find(e => e.exerciseId === ex.exerciseId)
+            if (found) { map.set(ex.exerciseId, found); break }
+        }
+    }
+    return map
+}
 
-const weeklyVolume = computed(() => {
+function sessionMetricValue(sessionIndex: number): string {
+    const session = sessionStore.allSessions[sessionIndex]
+    if (!session) return '—'
+    switch (preferred.value) {
+        case 'volume': {
+            const vol = computeVolume(session.exercises)
+            return vol > 0 ? formatVolume(vol) : '—'
+        }
+        case 'session': {
+            const score = computeSessionScore(session.exercises, buildPrevMap(sessionIndex)).score
+            return String(score)
+        }
+        case 'overload': {
+            const r = computeProgressiveOverload(session.exercises, buildPrevMap(sessionIndex))
+            return r.totalTrackedCount > 0 ? `${r.score}%` : '–'
+        }
+        case 'intensity': {
+            const r = computeRelativeIntensity(session.exercises)
+            return r.exerciseCount > 0 ? `${r.avgPercent}%` : '—'
+        }
+    }
+}
+
+const weeklyPreferredMetric = computed(() => {
+    const allSessions = sessionStore.allSessions
     const now = new Date()
     const thisWeekStart = startOfWeek(now).getTime()
     const lastWeekStart = thisWeekStart - 7 * 24 * 60 * 60 * 1000
-    let thisVol = 0
-    let lastVol = 0
-    for (const s of sessionStore.allSessions) {
+    const thisSessions = allSessions.filter(s => new Date(s.date).getTime() >= thisWeekStart)
+    const lastSessions = allSessions.filter(s => {
         const t = new Date(s.date).getTime()
-        if (t >= thisWeekStart) thisVol += computeVolume(s.exercises)
-        else if (t >= lastWeekStart) lastVol += computeVolume(s.exercises)
+        return t >= lastWeekStart && t < thisWeekStart
+    })
+
+    function aggregate(sessions: typeof allSessions): number | null {
+        if (sessions.length === 0) return null
+        let total = 0
+        for (const s of sessions) {
+            const idx = allSessions.indexOf(s)
+            switch (preferred.value) {
+                case 'volume': total += computeVolume(s.exercises); break
+                case 'session': total += computeSessionScore(s.exercises, buildPrevMap(idx)).score; break
+                case 'overload': total += computeProgressiveOverload(s.exercises, buildPrevMap(idx)).score; break
+                case 'intensity': total += computeRelativeIntensity(s.exercises).avgPercent; break
+            }
+        }
+        return preferred.value === 'volume' ? total : Math.round(total / sessions.length)
     }
-    return { thisVol, lastVol }
+
+    const thisVal = aggregate(thisSessions)
+    const lastVal = aggregate(lastSessions)
+    const delta = thisVal !== null && lastVal !== null && lastVal > 0
+        ? Math.round(((thisVal - lastVal) / lastVal) * 100)
+        : null
+    return { thisVal, lastVal, delta }
 })
 
-const weeklyVolumeDelta = computed(() => {
-    const { thisVol, lastVol } = weeklyVolume.value
-    if (lastVol === 0) return null
-    return Math.round(((thisVol - lastVol) / lastVol) * 100)
+const weeklyPreferredFormatted = computed(() => {
+    const val = weeklyPreferredMetric.value.thisVal
+    if (val === null || val === 0) return '—'
+    if (preferred.value === 'volume') return formatVolume(val)
+    if (preferred.value === 'session') return String(val)
+    return `${val}%`
+})
+
+const weeklyPreferredLabel = computed(() => {
+    switch (preferred.value) {
+        case 'session': return '∅ Trainingsscore'
+        case 'volume': return 'Volumen diese Woche'
+        case 'overload': return '∅ Overload'
+        case 'intensity': return '∅ Intensität'
+    }
 })
 
 const sessionsThisWeek = computed(() => {
@@ -258,14 +327,14 @@ onMounted(async () => {
         <div v-if="sessionStore.allSessions.length > 0" class="bg-card border border-border rounded-2xl p-4 space-y-3">
             <p class="text-xs font-semibold text-text-muted uppercase tracking-wider">Fortschritt</p>
             <div class="grid grid-cols-2 gap-3">
-                <!-- Weekly volume -->
+                <!-- Preferred weekly metric -->
                 <div class="space-y-1">
-                    <div class="text-xs text-text-muted">Volumen diese Woche</div>
-                    <div class="font-bold text-lg leading-tight">{{ formatVolume(weeklyVolume.thisVol) }}</div>
+                    <div class="text-xs text-text-muted">{{ weeklyPreferredLabel }}</div>
+                    <div class="font-bold text-lg leading-tight">{{ weeklyPreferredFormatted }}</div>
                     <div class="flex items-center gap-1 text-xs">
-                        <template v-if="weeklyVolumeDelta !== null">
-                            <span :class="weeklyVolumeDelta >= 0 ? 'text-green-400' : 'text-red-400'" class="font-semibold">
-                                {{ weeklyVolumeDelta >= 0 ? '+' : '' }}{{ weeklyVolumeDelta }}%
+                        <template v-if="weeklyPreferredMetric.delta !== null">
+                            <span :class="weeklyPreferredMetric.delta >= 0 ? 'text-green-400' : 'text-red-400'" class="font-semibold">
+                                {{ weeklyPreferredMetric.delta >= 0 ? '+' : '' }}{{ weeklyPreferredMetric.delta }}%
                             </span>
                             <span class="text-text-muted">vs. Vorwoche</span>
                         </template>
@@ -296,16 +365,16 @@ onMounted(async () => {
 
             <div v-else class="space-y-2">
                 <NuxtLink
-                    v-for="s in recentSessions"
+                    v-for="(s, si) in recentSessions"
                     :key="s.id"
                     :to="`/sessions/${s.id}`"
                     class="flex justify-between items-center py-1.5 hover:opacity-80 transition-opacity"
                 >
                     <div class="min-w-0">
                         <div class="text-sm font-medium truncate">{{ workoutName(s.workoutId) }}</div>
-                        <div class="text-xs text-text-muted">{{ s.exercises.length }} Übungen</div>
+                        <div class="text-xs text-text-muted">{{ s.exercises.length }} Übungen · {{ formatSessionDate(s.date) }}</div>
                     </div>
-                    <span class="text-xs text-text-muted shrink-0 ml-3">{{ formatSessionDate(s.date) }}</span>
+                    <span class="text-xs font-semibold shrink-0 ml-3">{{ sessionMetricValue(si) }}</span>
                 </NuxtLink>
             </div>
 

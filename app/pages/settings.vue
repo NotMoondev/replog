@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { exportAllData, importAllData } from '~/utils/exportImport'
+import { usePreferredMetric, METRIC_OPTIONS } from '~/composables/usePreferredMetric'
 
 const { addToast } = useToast()
 const { theme, setTheme } = useTheme()
+const { preferred, setPreferred } = usePreferredMetric()
 const importing = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 const { public: { appVersion } } = useRuntimeConfig()
@@ -132,6 +134,29 @@ async function handleImport(event: Event) {
                     <IconMoon v-if="opt.icon === 'IconMoon'" class="size-4" />
                     <IconSun v-else-if="opt.icon === 'IconSun'" class="size-4" />
                     <IconMonitor v-else class="size-4" />
+                    {{ opt.label }}
+                </button>
+            </div>
+        </div>
+
+        <!-- Preferred Metric -->
+        <div class="bg-card border border-border rounded-2xl p-4 space-y-3">
+            <div>
+                <h2 class="font-medium">Bevorzugte Metrik</h2>
+                <p class="text-sm text-text-muted mt-1">Wird auf der Session-Übersicht zuerst angezeigt und in der Wochenstatistik verwendet.</p>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <button
+                    v-for="opt in METRIC_OPTIONS"
+                    :key="opt.value"
+                    @click="setPreferred(opt.value)"
+                    :class="[
+                        'rounded-xl py-2.5 text-xs font-medium transition-colors border',
+                        preferred === opt.value
+                            ? 'bg-accent/15 border-accent text-accent'
+                            : 'bg-surface/60 border-transparent text-text-muted hover:text-text'
+                    ]"
+                >
                     {{ opt.label }}
                 </button>
             </div>
