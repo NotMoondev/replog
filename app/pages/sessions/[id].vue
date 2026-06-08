@@ -29,7 +29,7 @@ const session = computed(() =>
 )
 
 const workout = computed(() =>
-    session.value ? workoutStore.workouts.find(w => w.id === session.value!.workoutId) : undefined
+    session.value ? workoutStore.allWorkouts.find(w => w.id === session.value!.workoutId) : undefined
 )
 
 // Previous session for same workout (next in allSessions since sorted desc)

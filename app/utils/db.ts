@@ -25,6 +25,10 @@ class AppDB extends Dexie {
         this.version(3).stores({
             exercises: 'id, name, type',
         })
+
+        this.version(4).stores({
+            workouts: 'id, name, createdAt, archived',
+        })
     }
 }
 

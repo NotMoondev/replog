@@ -10,6 +10,8 @@ const activeSession = useActiveSession()
 const { showConflict, navigateTo, confirmDiscard, confirmResume, cancel: cancelConflict } = activeSession.useConflictGuard()
 const showCreateDrawer = ref(false)
 const newName = ref('')
+const showArchiveDrawer = ref(false)
+const confirmDeleteId = ref<string | null>(null)
 const { formatLastSession } = useFormatters()
 
 onMounted(async () => {
@@ -28,6 +30,15 @@ function lastSessionLabel(workoutId: string): string | null {
     const last = sessionStore.allSessions.find(s => s.workoutId === workoutId)
     return last ? formatLastSession(last.date) : null
 }
+
+async function handleUnarchive(id: string) {
+    await store.unarchiveWorkout(id)
+}
+
+async function handlePermanentDelete(id: string) {
+    await store.deleteWorkout(id)
+    confirmDeleteId.value = null
+}
 </script>
 
 <template>
@@ -43,6 +54,13 @@ function lastSessionLabel(workoutId: string): string | null {
                 >
                     <IconListChecks class="size-4" />
                 </NuxtLink>
+                <button
+                    @click="showArchiveDrawer = true"
+                    class="flex items-center justify-center size-9 bg-surface hover:bg-surface-hover border border-border rounded-xl transition-colors text-text-muted hover:text-text"
+                    title="Archiv"
+                >
+                    <IconArchive class="size-4" />
+                </button>
                 <button
                     @click="showCreateDrawer = true"
                     class="bg-primary-500 hover:bg-primary-600 text-white rounded-xl px-4 py-2 font-semibold text-sm transition-colors flex items-center gap-1.5"
@@ -122,5 +140,63 @@ function lastSessionLabel(workoutId: string): string | null {
         @discard="confirmDiscard"
         @cancel="cancelConflict"
     />
+
+    <!-- Archive Drawer -->
+    <BottomDrawer :open="showArchiveDrawer" @close="showArchiveDrawer = false; confirmDeleteId = null">
+        <div class="flex items-center gap-2 mb-1">
+            <IconArchive class="size-4 text-text-muted" />
+            <h2 class="font-semibold text-lg text-text">Archiv</h2>
+        </div>
+        <div v-if="store.archivedWorkouts.length === 0" class="text-center py-8 text-sm text-text-muted">
+            Keine archivierten Workouts.
+        </div>
+        <div v-else class="space-y-2 max-h-96 overflow-y-auto">
+            <div
+                v-for="w in store.archivedWorkouts"
+                :key="w.id"
+                class="bg-surface border border-border rounded-2xl p-4 flex items-center justify-between gap-3"
+            >
+                <div class="min-w-0">
+                    <div class="font-semibold text-sm truncate text-text-muted">{{ w.name }}</div>
+                    <div class="text-xs text-text-muted/60 mt-0.5">{{ w.exercises.length }} Übungen</div>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button
+                        @click="handleUnarchive(w.id)"
+                        class="flex items-center gap-1.5 text-xs bg-surface hover:bg-surface-hover border border-border rounded-lg px-3 py-1.5 font-medium text-text-muted hover:text-text transition-colors"
+                        title="Aus Archiv entfernen"
+                    >
+                        <IconArchiveRestore class="size-3.5" />
+                        Wiederherstellen
+                    </button>
+                    <template v-if="confirmDeleteId === w.id">
+                        <button
+                            @click="handlePermanentDelete(w.id)"
+                            class="flex items-center gap-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded-lg px-3 py-1.5 font-semibold transition-colors"
+                        >
+                            Löschen
+                        </button>
+                        <button
+                            @click="confirmDeleteId = null"
+                            class="flex items-center justify-center size-7 bg-surface hover:bg-surface-hover border border-border rounded-lg transition-colors text-text-muted"
+                        >
+                            <IconX class="size-3.5" />
+                        </button>
+                    </template>
+                    <button
+                        v-else
+                        @click="confirmDeleteId = w.id"
+                        class="flex items-center justify-center size-7 bg-surface hover:bg-surface-hover border border-border rounded-lg transition-colors text-text-muted hover:text-red-400"
+                        title="Endgültig löschen"
+                    >
+                        <IconTrash2 class="size-3.5" />
+                    </button>
+                </div>
+            </div>
+        </div>
+        <p v-if="confirmDeleteId" class="text-xs text-text-muted/70 text-center pt-1">
+            Achtung: Vergangene Sessions dieses Workouts werden danach nicht mehr vollständig angezeigt.
+        </p>
+    </BottomDrawer>
 </template>
 

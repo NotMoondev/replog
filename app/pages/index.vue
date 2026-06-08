@@ -170,7 +170,7 @@ const recentSessions = computed(() =>
 )
 
 function workoutName(workoutId: string): string {
-    return store.workouts.find(w => w.id === workoutId)?.name ?? 'Workout'
+    return store.allWorkouts.find(w => w.id === workoutId)?.name ?? 'Workout'
 }
 
 

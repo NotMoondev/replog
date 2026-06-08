@@ -19,7 +19,7 @@ onMounted(async () => {
 })
 
 function workoutName(workoutId: string, sessionIndex: number): string {
-    return workoutStore.workouts.find(w => w.id === workoutId)?.name
+    return workoutStore.allWorkouts.find(w => w.id === workoutId)?.name
         ?? sessionStore.allSessions[sessionIndex]?.workoutName
         ?? 'Unbekanntes Workout'
 }

@@ -56,4 +56,5 @@ export interface Workout {
     name: string
     exercises: Exercise[]
     createdAt: string // ISO string!
+    archived?: boolean
 }

@@ -11,12 +11,16 @@ const activeSession = useActiveSession()
 const { showConflict, navigateTo, confirmDiscard, confirmResume, cancel: cancelConflict } = activeSession.useConflictGuard()
 
 const workout = computed(() =>
-    store.workouts.find(w => w.id === route.params.id)
+    store.workouts.find(w => w.id === route.params.id) ??
+    store.archivedWorkouts.find(w => w.id === route.params.id)
 )
+
+const isArchived = computed(() => !!workout.value?.archived)
 
 const showModal = ref(false)
 const showPicker = ref(false)
 const editingExercise = ref<{ exercise: Exercise; index: number } | null>(null)
+const confirmingArchive = ref(false)
 const confirmingDelete = ref(false)
 
 const reorderMode = ref(false)
@@ -88,16 +92,27 @@ async function handleClone() {
     router.back()
 }
 
+async function handleArchive() {
+    if (!workout.value) return
+    await store.archiveWorkout(workout.value.id)
+    router.replace('/workouts')
+}
+
 async function handleDelete() {
     if (!workout.value) return
     await store.deleteWorkout(workout.value.id)
     router.replace('/workouts')
 }
 
+async function handleUnarchive() {
+    if (!workout.value) return
+    await store.unarchiveWorkout(workout.value.id)
+    router.replace('/workouts')
+}
+
 const isLocked = computed(() =>
     activeSession.isActive.value && activeSession.meta.value?.workoutId === workout.value?.id
-)
-</script>
+)</script>
 
 <template>
     <div class="min-h-full bg-bg text-text p-4 space-y-6 relative">
@@ -106,6 +121,39 @@ const isLocked = computed(() =>
         </div>
 
         <template v-else>
+            <!-- Archived banner -->
+            <div v-if="isArchived"
+                class="bg-surface border border-border rounded-xl px-4 py-3 flex items-center justify-between">
+                <div class="flex items-center gap-2 text-text-muted">
+                    <IconArchive class="size-4 shrink-0" />
+                    <span class="text-sm font-medium">Archiviert</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button @click="handleUnarchive"
+                        class="text-xs bg-surface hover:bg-surface-hover border border-border rounded-lg px-3 py-1.5 font-medium text-text-muted hover:text-text transition-colors flex items-center gap-1.5">
+                        <IconArchiveRestore class="size-3.5" />
+                        Wiederherstellen
+                    </button>
+                    <template v-if="confirmingDelete">
+                        <button @click="handleDelete"
+                            class="text-xs bg-red-600 hover:bg-red-700 text-white rounded-lg px-3 py-1.5 font-semibold transition-colors">
+                            Löschen
+                        </button>
+                        <button @click="confirmingDelete = false"
+                            class="flex items-center justify-center size-7 bg-surface hover:bg-surface-hover border border-border rounded-lg transition-colors text-text-muted">
+                            <IconX class="size-3.5" />
+                        </button>
+                    </template>
+                    <button v-else @click="confirmingDelete = true"
+                        class="flex items-center justify-center size-7 bg-surface hover:bg-surface-hover border border-border rounded-lg transition-colors text-text-muted hover:text-red-400">
+                        <IconTrash2 class="size-3.5" />
+                    </button>
+                </div>
+            </div>
+            <p v-if="confirmingDelete && isArchived" class="text-xs text-text-muted/70 text-center -mt-2">
+                Achtung: Vergangene Sessions dieses Workouts werden danach nicht mehr vollständig angezeigt.
+            </p>
+
             <!-- Active session banner -->
             <div v-if="activeSession.isActive.value && activeSession.meta.value?.workoutId === workout.id"
                 class="bg-primary-500/10 border border-primary-500/30 rounded-xl px-4 py-3 flex items-center justify-between">
@@ -134,17 +182,17 @@ const isLocked = computed(() =>
                         <IconX class="size-5" />
                     </button>
                 </div>
-                <div v-else class="flex items-center gap-2 cursor-pointer group" 
-                    @click="!isLocked && startRename" 
+                <div v-else class="flex items-center gap-2 cursor-pointer group"
+                    @click="!isLocked && !isArchived && startRename"
                     :class="{ 'opacity-60': isLocked }">
                     <h1 class="text-2xl font-semibold">{{ workout.name }}</h1>
-                    <IconPencil class="size-4 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <IconPencil v-if="!isArchived" class="size-4 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
                 <div class="flex items-center justify-between">
                     <p class="text-text-muted text-sm">
                         {{ workout.exercises.length }} Übungen
                     </p>
-                    <button v-if="workout.exercises.length > 1" @click="reorderMode = !reorderMode"
+                    <button v-if="workout.exercises.length > 1 && !isArchived" @click="reorderMode = !reorderMode"
                         :disabled="isLocked"
                         :class="['flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors',
                         reorderMode
@@ -161,9 +209,9 @@ const isLocked = computed(() =>
             <draggable v-model="workout.exercises" item-key="id" handle=".drag-handle" :disabled="!reorderMode"
                 class="space-y-3" ghost-class="opacity-40" @end="handleDragEnd">
                 <template #item="{ element: ex, index }">
-                    <ExerciseCard :exercise="ex" :reorder-mode="reorderMode" :can-move-up="index > 0" :is-locked="isLocked"
-                        :can-move-down="index < workout.exercises.length - 1" @edit="openEditExercise(ex, index)"
-                        @delete="handleDeleteExercise(ex.id)" @move-up="handleMoveExercise(index, 'up')"
+                    <ExerciseCard :exercise="ex" :reorder-mode="reorderMode" :can-move-up="index > 0" :is-locked="isLocked || isArchived"
+                        :can-move-down="index < workout.exercises.length - 1" @edit="!isArchived && openEditExercise(ex, index)"
+                        @delete="!isArchived && handleDeleteExercise(ex.id)" @move-up="handleMoveExercise(index, 'up')"
                         @move-down="handleMoveExercise(index, 'down')" />
                 </template>
             </draggable>
@@ -174,6 +222,7 @@ const isLocked = computed(() =>
             </div>
 
             <!-- Start + Add Buttons -->
+            <template v-if="!isArchived">
             <button @click="handleStartWorkout" :disabled="workout.exercises.length === 0"
                 class="w-full bg-primary-500 hover:bg-primary-600 rounded-xl py-3 font-semibold text-sm text-center flex items-center justify-center gap-2 transition-colors disabled:bg-primary-500/50 disabled:hover:bg-primary-500/50 disabled:cursor-not-allowed disabled:text-white/70">
                 <IconPlay class="w-5 h-5" />
@@ -194,33 +243,34 @@ const isLocked = computed(() =>
                     title="Duplizieren">
                     <IconCopy class="size-4" />
                 </button>
-                <template v-if="confirmingDelete">
-                    <button @click="handleDelete"
-                        class="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl py-2.5 px-4 text-sm font-semibold transition-colors">
-                        Löschen
+                <template v-if="confirmingArchive">
+                    <button @click="handleArchive"
+                        class="flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl py-2.5 px-4 text-sm font-semibold transition-colors">
+                        Archivieren
                     </button>
-                    <button @click="confirmingDelete = false"
+                    <button @click="confirmingArchive = false"
                         class="flex items-center justify-center bg-surface hover:bg-surface-hover border border-border rounded-xl py-2.5 px-3 transition-colors text-text-muted hover:text-text">
                         <IconX class="size-4" />
                     </button>
                 </template>
-                <button v-else @click="confirmingDelete = true"
-                    class="flex items-center justify-center gap-2 bg-surface hover:bg-surface-hover border border-border rounded-xl py-2.5 px-4 text-sm font-medium transition-colors text-text-muted hover:text-red-400"
-                    title="Workout löschen"
+                <button v-else @click="confirmingArchive = true"
+                    class="flex items-center justify-center gap-2 bg-surface hover:bg-surface-hover border border-border rounded-xl py-2.5 px-4 text-sm font-medium transition-colors text-text-muted hover:text-amber-400"
+                    title="Workout archivieren"
                     :disabled="isLocked"
                     :class="isLocked && 'opacity-40 pointer-events-none'">
-                    <IconTrash2 class="size-4" />
+                    <IconArchive class="size-4" />
                 </button>
             </div>
+            </template>
 
             <!-- Picker Modal (from library or create new) -->
-            <ExercisePickerModal v-if="showPicker" @close="showPicker = false" :workoutId="workout.id" />
+            <ExercisePickerModal v-if="showPicker && !isArchived" @close="showPicker = false" :workoutId="workout.id" />
 
             <!-- Add directly Modal (fallback kept for compatibility) -->
-            <ExerciseModal v-if="showModal" @close="showModal = false" :workoutId="workout.id" />
+            <ExerciseModal v-if="showModal && !isArchived" @close="showModal = false" :workoutId="workout.id" />
 
             <!-- Edit Modal -->
-            <ExerciseModal v-if="editingExercise" @close="editingExercise = null" :workoutId="workout.id"
+            <ExerciseModal v-if="editingExercise && !isArchived" @close="editingExercise = null" :workoutId="workout.id"
                 :initialExercise="editingExercise.exercise" :exerciseIndex="editingExercise.index" />
         </template>
     </div>

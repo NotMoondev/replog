@@ -6,13 +6,20 @@ import type { Workout, Exercise } from '~/types/workout'
 export const useWorkoutStore = defineStore('workouts', {
     state: () => ({
         workouts: [] as Workout[],
+        archivedWorkouts: [] as Workout[],
         loading: false,
     }),
+
+    getters: {
+        allWorkouts: (state): Workout[] => [...state.workouts, ...state.archivedWorkouts],
+    },
 
     actions: {
         async loadWorkouts() {
             this.loading = true
-            this.workouts = await db.workouts.toArray()
+            const all = await db.workouts.toArray()
+            this.workouts = all.filter(w => !w.archived)
+            this.archivedWorkouts = all.filter(w => !!w.archived)
             this.loading = false
         },
 
@@ -29,10 +36,31 @@ export const useWorkoutStore = defineStore('workouts', {
         },
 
         async deleteWorkout(id: string) {
-            const workout = this.workouts.find(w => w.id === id)
+            const workout = this.workouts.find(w => w.id === id) ?? this.archivedWorkouts.find(w => w.id === id)
             await db.workouts.delete(id)
             this.workouts = this.workouts.filter(w => w.id !== id)
+            this.archivedWorkouts = this.archivedWorkouts.filter(w => w.id !== id)
             if (workout) useToast().addToast(`"${workout.name}" gelöscht`, 'info')
+        },
+
+        async archiveWorkout(id: string) {
+            const workout = this.workouts.find(w => w.id === id)
+            if (!workout) return
+            workout.archived = true
+            await db.workouts.put(serialize(workout))
+            this.workouts = this.workouts.filter(w => w.id !== id)
+            this.archivedWorkouts.push(workout)
+            useToast().addToast(`"${workout.name}" archiviert`, 'info')
+        },
+
+        async unarchiveWorkout(id: string) {
+            const workout = this.archivedWorkouts.find(w => w.id === id)
+            if (!workout) return
+            workout.archived = false
+            await db.workouts.put(serialize(workout))
+            this.archivedWorkouts = this.archivedWorkouts.filter(w => w.id !== id)
+            this.workouts.push(workout)
+            useToast().addToast(`"${workout.name}" wiederhergestellt`)
         },
 
         async addExercise(workoutId: string, exercise: Exercise) {
