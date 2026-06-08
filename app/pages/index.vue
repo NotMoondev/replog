@@ -421,7 +421,7 @@ onMounted(async () => {
                             </span>
                             <span class="text-text-muted">vs. Vorwoche</span>
                         </template>
-                        <span v-else class="text-text-muted">Erste Woche</span>
+                        <span v-else class="text-text-muted">Keine Vergleichsdaten</span>
                     </div>
                 </div>
                 <!-- Sessions this week -->

@@ -193,10 +193,10 @@ function confirmAbandon() {
                             class="w-full bg-surface border border-border rounded-xl px-3 py-2 text-sm outline-none focus:border-primary-500 transition-colors"
                         />
                         <span class="text-sm text-text-muted">{{ durationUnit }}</span>
-                        <span v-if="lastSession?.duration" class="ml-auto text-xs text-text-muted">
-                            Zuletzt: {{ secondsToDisplay(lastSession.duration, autoUnit(lastSession.duration)) }} {{ autoUnit(lastSession.duration) }}
-                        </span>
                     </div>
+                    <span v-if="lastSession?.duration" class="ml-auto text-xs text-text-muted">
+                        Zuletzt: {{ secondsToDisplay(lastSession.duration, autoUnit(lastSession.duration)) }} {{ autoUnit(lastSession.duration) }}
+                    </span>
                 </div>
 
                 <!-- Metric -->
@@ -210,10 +210,10 @@ function confirmAbandon() {
                             min="0"
                             class="w-full bg-surface border border-border rounded-xl px-3 py-2 text-sm outline-none focus:border-primary-500 transition-colors"
                         />
-                        <span v-if="lastSession?.metricValue" class="ml-auto text-xs text-text-muted">
-                            Zuletzt: {{ lastSession.metricValue }}
-                        </span>
                     </div>
+                    <span v-if="lastSession?.metricValue" class="ml-auto text-xs text-text-muted">
+                        Zuletzt: {{ lastSession.metricValue }} {{ exercise.metric === 'speed' ? 'km/h' : exercise.metric === 'intensity' ? '%' : '' }}
+                    </span>
                 </div>
 
                 <!-- Done toggle -->
@@ -247,30 +247,9 @@ function confirmAbandon() {
             </button>
         </template>
 
-        <!-- Abandon dialog -->
-        <div
-            v-if="showAbandonDialog"
-            class="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4"
-            @click.self="showAbandonDialog = false"
-        >
-            <div class="bg-card border border-border rounded-2xl p-5 w-full max-w-sm space-y-4">
-                <h2 class="font-semibold text-lg">Training abbrechen?</h2>
-                <p class="text-sm text-text-muted">Der Fortschritt geht verloren.</p>
-                <div class="flex gap-3">
-                    <button
-                        @click="showAbandonDialog = false"
-                        class="flex-1 bg-surface border border-border text-text rounded-xl py-2.5 font-semibold text-sm transition-colors"
-                    >
-                        Weiter
-                    </button>
-                    <button
-                        @click="confirmAbandon"
-                        class="flex-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl py-2.5 font-semibold text-sm transition-colors"
-                    >
-                        Abbrechen
-                    </button>
-                </div>
-            </div>
-        </div>
+        <AbandonSessionDialog
+            v-model:open="showAbandonDialog"
+            @confirm="confirmAbandon"
+        />
     </div>
 </template>
