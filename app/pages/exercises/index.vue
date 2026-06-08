@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useExerciseStore } from '~/stores/useExerciseStore'
 import { PRESET_EXERCISES } from '~/utils/presetExercises'
+import { useActiveSession } from '~/composables/useActiveSession'
 import type { Exercise } from '~/types/workout'
 
 const store = useExerciseStore()
@@ -9,7 +10,19 @@ const editingExercise = ref<Exercise | null>(null)
 const confirmingDeleteId = ref<string | null>(null)
 const searchQuery = ref('')
 const activeTab = ref<'mine' | 'presets'>('mine')
+const activeFilter = ref<'all' | 'cardio' | 'reps' | 'reps+weight' | 'time'>('all')
 const { formatSetDuration } = useFormatters()
+
+const activeSession = useActiveSession()
+const { showConflict, navigateToExercise, confirmDiscard, confirmResume, cancel: cancelConflict } = activeSession.useConflictGuard()
+
+const FILTERS = [
+    { value: 'all', label: 'Alle' },
+    { value: 'reps+weight', label: 'Gewicht & Reps' },
+    { value: 'reps', label: 'Reps' },
+    { value: 'time', label: 'Zeit' },
+    { value: 'cardio', label: 'Cardio' },
+] as const
 
 // Map of preset IDs that the user has customised and saved to the store
 const presetOverrides = computed(() =>
@@ -24,8 +37,16 @@ const mergedPresets = computed(() =>
 const filteredExercises = computed(() => {
     const q = searchQuery.value.toLowerCase().trim()
     const source = activeTab.value === 'presets' ? mergedPresets.value : store.exercises.filter(e => !e.id.startsWith('preset-'))
-    if (!q) return source
-    return source.filter(e => e.name.toLowerCase().includes(q))
+    const f = activeFilter.value
+    return source.filter(e => {
+        if (q && !e.name.toLowerCase().includes(q)) return false
+        if (f === 'all') return true
+        if (f === 'cardio') return e.type === 'cardio'
+        if (f === 'reps+weight') return e.type === 'strength' && (!e.mode || e.mode === 'reps+weight')
+        if (f === 'reps') return e.type === 'strength' && e.mode === 'reps'
+        if (f === 'time') return e.type === 'strength' && e.mode === 'time'
+        return true
+    })
 })
 
 function formatDuration(secs: number): string {
@@ -83,6 +104,21 @@ async function handleDelete(id: string) {
                 :class="activeTab === 'presets' ? 'bg-primary-500 text-white' : 'bg-surface text-text-muted hover:text-text'"
             >
                 App-Vorlagen
+            </button>
+        </div>
+
+        <!-- Type filter chips -->
+        <div class="flex gap-2 overflow-x-auto pb-0.5 no-scrollbar">
+            <button
+                v-for="f in FILTERS"
+                :key="f.value"
+                @click="activeFilter = f.value"
+                class="shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors"
+                :class="activeFilter === f.value
+                    ? 'bg-primary-500 text-white'
+                    : 'bg-surface text-text-muted border border-border hover:text-text'"
+            >
+                {{ f.label }}
             </button>
         </div>
 
@@ -153,21 +189,32 @@ async function handleDelete(id: string) {
                         </div>
                     </div>
 
-                    <div v-if="activeTab === 'mine'" class="flex items-center gap-2 shrink-0" @click.stop>
-                        <template v-if="confirmingDeleteId === ex.id">
-                            <button @click="handleDelete(ex.id)"
-                                class="text-red-400 hover:text-red-300 text-sm font-medium transition px-1">
-                                Löschen
-                            </button>
-                            <button @click="confirmingDeleteId = null"
-                                class="text-text-muted hover:text-text transition">
-                                <IconX class="size-3.5" />
+                    <div class="flex items-center gap-2 shrink-0" @click.stop>
+                        <!-- Start cardio session (mine + presets) -->
+                        <button
+                            v-if="ex.type === 'cardio'"
+                            @click="navigateToExercise(ex.id, ex.name)"
+                            class="text-primary-400 hover:text-primary-300 transition-colors"
+                            title="Session starten"
+                        >
+                            <IconPlay class="size-4" />
+                        </button>
+                        <template v-if="activeTab === 'mine'">
+                            <template v-if="confirmingDeleteId === ex.id">
+                                <button @click="handleDelete(ex.id)"
+                                    class="text-red-400 hover:text-red-300 text-sm font-medium transition px-1">
+                                    Löschen
+                                </button>
+                                <button @click="confirmingDeleteId = null"
+                                    class="text-text-muted hover:text-text transition">
+                                    <IconX class="size-3.5" />
+                                </button>
+                            </template>
+                            <button v-else @click="confirmingDeleteId = ex.id"
+                                class="text-text-muted hover:text-red-400 transition-colors">
+                                <IconTrash2 class="size-4" />
                             </button>
                         </template>
-                        <button v-else @click="confirmingDeleteId = ex.id"
-                            class="text-text-muted hover:text-red-400 transition-colors">
-                            <IconTrash2 class="size-4" />
-                        </button>
                     </div>
 
 
@@ -191,5 +238,13 @@ async function handleDelete(id: string) {
 
         <!-- Edit Modal -->
         <ExerciseModal v-if="editingExercise" @close="editingExercise = null" :initialExercise="editingExercise" />
+
+        <!-- Conflict dialog -->
+        <SessionConflictDialog
+            v-if="showConflict"
+            @resume="confirmResume"
+            @discard="confirmDiscard"
+            @cancel="cancelConflict"
+        />
     </div>
 </template>

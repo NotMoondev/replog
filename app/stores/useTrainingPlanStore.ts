@@ -28,6 +28,14 @@ export const useTrainingPlanStore = defineStore('trainingPlans', {
             return day.workoutId ?? null
         },
 
+        todayCardioExerciseId(): string | null {
+            const plan = this.activePlan
+            if (!plan) return null
+            const day = plan.days.find(d => d.weekday === this.todayWeekday)
+            if (!day || day.isRestDay) return null
+            return day.cardioExerciseId ?? null
+        },
+
         todayIsRestDay(): boolean {
             const plan = this.activePlan
             if (!plan) return false

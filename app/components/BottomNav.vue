@@ -27,7 +27,7 @@ function isActive(path: string): boolean {
         >
             <button
                 v-if="activeSession.isActive.value"
-                @click="router.push(`/session/${activeSession.meta.value?.workoutId}`)"
+                @click="router.push(activeSession.sessionRoute.value!)"
                 class="w-full bg-primary-500 hover:bg-primary-600 text-white rounded-xl py-2.5 px-4 font-semibold text-sm flex items-center gap-2 shadow-lg transition-colors"
             >
                 <IconPlay class="size-4 shrink-0" />

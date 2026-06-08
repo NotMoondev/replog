@@ -52,7 +52,7 @@ async function handlePermanentDelete(id: string) {
                     class="flex items-center justify-center size-9 bg-surface hover:bg-surface-hover border border-border rounded-xl transition-colors text-text-muted hover:text-text"
                     title="Übungsbibliothek"
                 >
-                    <IconListChecks class="size-4" />
+                    <IconDumbbell class="size-4" />
                 </NuxtLink>
                 <button
                     @click="showArchiveDrawer = true"

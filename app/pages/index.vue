@@ -3,17 +3,21 @@ import { ref, computed, onMounted } from 'vue'
 import { useWorkoutStore } from '~/stores/useWorkoutStore'
 import { useTrainingPlanStore } from '~/stores/useTrainingPlanStore'
 import { useSessionStore } from '~/stores/useSessionStore'
+import { useExerciseStore } from '~/stores/useExerciseStore'
 import { computeVolume, computeSessionScore, computeProgressiveOverload, computeRelativeIntensity } from '~/utils/metrics'
 import { useActiveSession } from '~/composables/useActiveSession'
 import { useFormatters } from '~/composables/useFormatters'
 import { usePreferredMetric } from '~/composables/usePreferredMetric'
+import { PRESET_EXERCISES } from '~/utils/presetExercises'
 import type { WorkoutSessionExercise } from '~/types/session'
+import type { CardioExercise } from '~/types/workout'
 
 const store = useWorkoutStore()
 const planStore = useTrainingPlanStore()
 const sessionStore = useSessionStore()
+const exerciseStore = useExerciseStore()
 const activeSession = useActiveSession()
-const { showConflict, navigateTo, confirmDiscard, confirmResume, cancel: cancelConflict } = activeSession.useConflictGuard()
+const { showConflict, navigateTo, navigateToExercise, confirmDiscard, confirmResume, cancel: cancelConflict } = activeSession.useConflictGuard()
 const { formatSessionDate, formatVolume } = useFormatters()
 const { preferred } = usePreferredMetric()
 
@@ -33,30 +37,62 @@ const todayWorkout = computed(() => {
     return store.workouts.find(w => w.id === wid) ?? null
 })
 
+const todayCardioExercise = computed<CardioExercise | null>(() => {
+    const eid = planStore.todayCardioExerciseId
+    if (!eid) return null
+    const fromStore = exerciseStore.exercises.find(e => e.id === eid)
+    if (fromStore?.type === 'cardio') return fromStore as CardioExercise
+    const fromPreset = PRESET_EXERCISES.find(e => e.id === eid)
+    if (fromPreset?.type === 'cardio') return fromPreset as CardioExercise
+    return null
+})
+
 const todaySession = computed(() => {
-    if (!todayWorkout.value) return null
     const todayStart = new Date()
     todayStart.setHours(0, 0, 0, 0)
     const todayEnd = new Date()
     todayEnd.setHours(23, 59, 59, 999)
 
-    return sessionStore.allSessions.find(s => {
-        const sessionDate = new Date(s.date)
-        return s.workoutId === todayWorkout.value!.id &&
-               sessionDate >= todayStart &&
-               sessionDate <= todayEnd
-    }) ?? null
+    if (todayWorkout.value) {
+        return sessionStore.allSessions.find(s => {
+            const sessionDate = new Date(s.date)
+            return s.workoutId === todayWorkout.value!.id &&
+                   sessionDate >= todayStart &&
+                   sessionDate <= todayEnd
+        }) ?? null
+    }
+
+    if (todayCardioExercise.value) {
+        const key = `exercise:${todayCardioExercise.value.id}`
+        return sessionStore.allSessions.find(s => {
+            const sessionDate = new Date(s.date)
+            return s.workoutId === key &&
+                   sessionDate >= todayStart &&
+                   sessionDate <= todayEnd
+        }) ?? null
+    }
+
+    return null
 })
 
 const weekDays = computed(() => {
     if (!planStore.activePlan) return []
-    return planStore.activePlan.days.map((day, i) => ({
-        label: WEEKDAYS_SHORT[i],
-        weekday: i,
-        isRestDay: day.isRestDay,
-        workout: day.workoutId ? store.workouts.find(w => w.id === day.workoutId) ?? null : null,
-        isToday: i === planStore.todayWeekday,
-    }))
+    return planStore.activePlan.days.map((day, i) => {
+        const cardioExercise = day.cardioExerciseId
+            ? (exerciseStore.exercises.find(e => e.id === day.cardioExerciseId)
+                ?? PRESET_EXERCISES.find(e => e.id === day.cardioExerciseId)
+                ?? null)
+            : null
+        return {
+            label: WEEKDAYS_SHORT[i],
+            weekday: i,
+            isRestDay: day.isRestDay,
+            isCardio: !day.isRestDay && day.dayMode === 'cardio',
+            workout: day.workoutId ? store.workouts.find(w => w.id === day.workoutId) ?? null : null,
+            cardioExercise,
+            isToday: i === planStore.todayWeekday,
+        }
+    })
 })
 
 // ── Metrics ──────────────────────────────────────────────────────────────────
@@ -179,6 +215,7 @@ onMounted(async () => {
         store.loadWorkouts(),
         planStore.loadPlans(),
         sessionStore.loadAllSessions(),
+        exerciseStore.loadExercises(),
     ])
 })
 </script>
@@ -270,6 +307,38 @@ onMounted(async () => {
                 </button>
             </div>
 
+            <div v-else-if="todayCardioExercise" class="space-y-3">
+                <div class="flex items-center gap-2">
+                    <IconHeartPulse class="size-4 text-primary-400" />
+                    <div>
+                        <div class="font-semibold">{{ todayCardioExercise.name }}</div>
+                        <div class="text-xs text-text-muted">Cardio</div>
+                    </div>
+                </div>
+
+                <!-- Already completed today -->
+                <div v-if="todaySession" class="space-y-2">
+                    <div class="flex items-center gap-2 text-green-400">
+                        <IconCircleCheck class="size-5" />
+                        <span class="text-sm font-medium">Training erfolgreich abgeschlossen!</span>
+                    </div>
+                    <NuxtLink
+                        :to="`/sessions/${todaySession.id}`"
+                        class="block w-full bg-surface hover:bg-border text-text text-center rounded-xl py-2.5 font-semibold text-sm transition-colors"
+                    >
+                        Session anzeigen
+                    </NuxtLink>
+                </div>
+
+                <button
+                    v-else
+                    @click="navigateToExercise(todayCardioExercise.id, todayCardioExercise.name)"
+                    class="block w-full bg-primary-500 hover:bg-primary-600 text-white text-center rounded-xl py-2.5 font-semibold text-sm transition-colors"
+                >
+                    Training starten
+                </button>
+            </div>
+
             <div v-else class="text-sm text-text-muted">
                 Kein Workout für heute eingetragen.
                 <NuxtLink to="/plan" class="text-primary-400 hover:text-primary-300 transition-colors">Plan bearbeiten</NuxtLink>
@@ -307,6 +376,11 @@ onMounted(async () => {
                             class="size-3"
                             :class="day.isToday ? 'text-white' : 'text-text-muted'"
                         />
+                        <IconHeartPulse
+                            v-else-if="day.isCardio"
+                            class="size-3"
+                            :class="day.isToday ? 'text-white' : 'text-primary-400'"
+                        />
                         <IconDumbbell
                             v-else
                             class="size-3"
@@ -314,10 +388,10 @@ onMounted(async () => {
                         />
                     </div>
                     <span
-                        v-if="!day.isRestDay && day.workout"
+                        v-if="!day.isRestDay && (day.workout || day.cardioExercise)"
                         class="text-[9px] text-center leading-tight w-full truncate text-text-muted"
                     >
-                        {{ day.workout.name }}
+                        {{ day.workout?.name ?? day.cardioExercise?.name }}
                     </span>
                 </div>
             </div>

@@ -54,10 +54,16 @@ export function useActiveSession() {
         let _pendingWorkoutId = ''
         let _pendingWorkoutName = ''
 
+        function _resolveRoute(id: string): string {
+            return id.startsWith('exercise:')
+                ? `/session/exercise/${id.slice('exercise:'.length)}`
+                : `/session/${id}`
+        }
+
         function navigateTo(workoutId: string, workoutName: string) {
             const active = _meta.value
             if (!active || active.workoutId === workoutId) {
-                router.push(`/session/${workoutId}`)
+                router.push(_resolveRoute(workoutId))
                 return
             }
             _pendingWorkoutId = workoutId
@@ -65,23 +71,35 @@ export function useActiveSession() {
             showConflict.value = true
         }
 
+        function navigateToExercise(exerciseId: string, exerciseName: string) {
+            navigateTo(`exercise:${exerciseId}`, exerciseName)
+        }
+
         function confirmDiscard() {
             showConflict.value = false
             clear()
-            router.push(`/session/${_pendingWorkoutId}`)
+            router.push(_resolveRoute(_pendingWorkoutId))
         }
 
         function confirmResume() {
             showConflict.value = false
-            if (_meta.value) router.push(`/session/${_meta.value.workoutId}`)
+            if (_meta.value) router.push(_resolveRoute(_meta.value.workoutId))
         }
 
         function cancel() {
             showConflict.value = false
         }
 
-        return { showConflict, navigateTo, confirmDiscard, confirmResume, cancel }
+        return { showConflict, navigateTo, navigateToExercise, confirmDiscard, confirmResume, cancel }
     }
 
-    return { meta: readonly(_meta), isActive, set, clear, useConflictGuard }
+    const sessionRoute = computed(() => {
+        const id = _meta.value?.workoutId
+        if (!id) return null
+        return id.startsWith('exercise:')
+            ? `/session/exercise/${id.slice('exercise:'.length)}`
+            : `/session/${id}`
+    })
+
+    return { meta: readonly(_meta), isActive, sessionRoute, set, clear, useConflictGuard }
 }

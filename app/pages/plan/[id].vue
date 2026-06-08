@@ -1,34 +1,72 @@
 <script setup lang="ts">
 import { useTrainingPlanStore } from '~/stores/useTrainingPlanStore'
 import { useWorkoutStore } from '~/stores/useWorkoutStore'
+import { useExerciseStore } from '~/stores/useExerciseStore'
+import { PRESET_EXERCISES } from '~/utils/presetExercises'
 
 const route = useRoute()
 const planStore = useTrainingPlanStore()
 const workoutStore = useWorkoutStore()
+const exerciseStore = useExerciseStore()
 
 const WEEKDAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag']
 
 const plan = computed(() => planStore.plans.find(p => p.id === route.params.id))
 
+const allCardioExercises = computed(() => {
+    const presetOverrides = new Map(exerciseStore.exercises.filter(e => e.id.startsWith('preset-')).map(e => [e.id, e]))
+    const presets = PRESET_EXERCISES.filter(p => p.type === 'cardio').map(p => presetOverrides.get(p.id) ?? p)
+    const custom = exerciseStore.exercises.filter(e => !e.id.startsWith('preset-') && e.type === 'cardio')
+    return [...custom, ...presets]
+})
+
 onMounted(async () => {
-    await Promise.all([planStore.loadPlans(), workoutStore.loadWorkouts()])
+    await Promise.all([planStore.loadPlans(), workoutStore.loadWorkouts(), exerciseStore.loadExercises()])
 })
 
 function getDayData(weekday: number) {
     return plan.value?.days.find(d => d.weekday === weekday)
-        ?? { weekday, isRestDay: true, workoutId: undefined }
+        ?? { weekday, isRestDay: true, workoutId: undefined, cardioExerciseId: undefined }
 }
 
-async function toggleRestDay(weekday: number, isRestDay: boolean) {
-    await planStore.updateDay(plan.value!.id, weekday, {
-        isRestDay,
-        workoutId: isRestDay ? undefined : getDayData(weekday).workoutId,
-    })
+function getDayMode(weekday: number): 'rest' | 'workout' | 'cardio' {
+    const d = getDayData(weekday)
+    if (d.isRestDay) return 'rest'
+    if (d.dayMode === 'cardio' || d.cardioExerciseId) return 'cardio'
+    return 'workout'
+}
+
+async function setDayMode(weekday: number, mode: 'rest' | 'workout' | 'cardio') {
+    if (mode === 'rest') {
+        await planStore.updateDay(plan.value!.id, weekday, {
+            isRestDay: true,
+            workoutId: undefined,
+            cardioExerciseId: undefined,
+        })
+    } else if (mode === 'workout') {
+        await planStore.updateDay(plan.value!.id, weekday, {
+            isRestDay: false,
+            dayMode: 'workout',
+            cardioExerciseId: undefined,
+        })
+    } else {
+        await planStore.updateDay(plan.value!.id, weekday, {
+            isRestDay: false,
+            dayMode: 'cardio',
+            workoutId: undefined,
+        })
+    }
 }
 
 async function setWorkout(weekday: number, workoutId: string) {
     await planStore.updateDay(plan.value!.id, weekday, {
         workoutId: workoutId || undefined,
+    })
+}
+
+async function setCardioExercise(weekday: number, exerciseId: string) {
+    await planStore.updateDay(plan.value!.id, weekday, {
+        cardioExerciseId: exerciseId || undefined,
     })
 }
 </script>
@@ -52,59 +90,72 @@ async function setWorkout(weekday: number, workoutId: string) {
                     v-for="weekday in 7"
                     :key="weekday - 1"
                     class="bg-card border rounded-2xl overflow-hidden transition-colors duration-200"
-                    :class="getDayData(weekday - 1).isRestDay ? 'border-border' : 'border-primary-500/30'"
+                    :class="getDayMode(weekday - 1) === 'rest' ? 'border-border' : 'border-primary-500/30'"
                 >
                     <!-- Row: icon + name + toggle pill -->
                     <div class="flex items-center justify-between px-4 py-3.5 gap-3">
                         <div class="flex items-center gap-3 min-w-0">
                             <div
                                 class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors duration-200"
-                                :class="getDayData(weekday - 1).isRestDay
+                                :class="getDayMode(weekday - 1) === 'rest'
                                     ? 'bg-surface text-text-muted'
                                     : 'bg-primary-500/15 text-primary-400'"
                             >
-                                <IconMoon v-if="getDayData(weekday - 1).isRestDay" class="size-4" />
+                                <IconMoon v-if="getDayMode(weekday - 1) === 'rest'" class="size-4" />
+                                <IconHeartPulse v-else-if="getDayMode(weekday - 1) === 'cardio'" class="size-4" />
                                 <IconDumbbell v-else class="size-4" />
                             </div>
                             <div class="min-w-0">
                                 <span class="font-medium text-sm">{{ WEEKDAYS[weekday - 1] }}</span>
                                 <p
-                                    v-if="!getDayData(weekday - 1).isRestDay && getDayData(weekday - 1).workoutId"
+                                    v-if="getDayMode(weekday - 1) === 'workout' && getDayData(weekday - 1).workoutId"
                                     class="text-xs text-text-muted truncate"
                                 >
                                     {{ workoutStore.workouts.find(w => w.id === getDayData(weekday - 1).workoutId)?.name }}
                                 </p>
+                                <p
+                                    v-else-if="getDayMode(weekday - 1) === 'cardio' && getDayData(weekday - 1).cardioExerciseId"
+                                    class="text-xs text-text-muted truncate"
+                                >
+                                    {{ allCardioExercises.find(e => e.id === getDayData(weekday - 1).cardioExerciseId)?.name }}
+                                </p>
                             </div>
                         </div>
 
-                        <!-- Rest / Workout toggle pill -->
+                        <!-- 3-way toggle: Ruhetag / Workout / Cardio -->
                         <div class="flex bg-surface rounded-xl p-0.5 text-xs font-medium shrink-0">
                             <button
                                 class="px-2.5 py-1.5 rounded-[10px] transition-all duration-150"
-                                :class="getDayData(weekday - 1).isRestDay
+                                :class="getDayMode(weekday - 1) === 'rest'
                                     ? 'bg-card text-text shadow-sm'
                                     : 'text-text-muted hover:text-text'"
-                                @click="toggleRestDay(weekday - 1, true)"
+                                @click="setDayMode(weekday - 1, 'rest')"
                             >
                                 Ruhetag
                             </button>
                             <button
                                 class="px-2.5 py-1.5 rounded-[10px] transition-all duration-150"
-                                :class="!getDayData(weekday - 1).isRestDay
+                                :class="getDayMode(weekday - 1) === 'workout'
                                     ? 'bg-primary-500 text-white shadow-sm'
                                     : 'text-text-muted hover:text-text'"
-                                @click="toggleRestDay(weekday - 1, false)"
+                                @click="setDayMode(weekday - 1, 'workout')"
                             >
                                 Workout
+                            </button>
+                            <button
+                                class="px-2.5 py-1.5 rounded-[10px] transition-all duration-150"
+                                :class="getDayMode(weekday - 1) === 'cardio'
+                                    ? 'bg-primary-500 text-white shadow-sm'
+                                    : 'text-text-muted hover:text-text'"
+                                @click="setDayMode(weekday - 1, 'cardio')"
+                            >
+                                Cardio
                             </button>
                         </div>
                     </div>
 
-                    <!-- Workout selector (visible when not a rest day) -->
-                    <div
-                        v-if="!getDayData(weekday - 1).isRestDay"
-                        class="px-4 pb-4"
-                    >
+                    <!-- Workout selector -->
+                    <div v-if="getDayMode(weekday - 1) === 'workout'" class="px-4 pb-4">
                         <div class="relative">
                             <select
                                 :value="getDayData(weekday - 1).workoutId ?? ''"
@@ -124,6 +175,30 @@ async function setWorkout(weekday: number, workoutId: string) {
                         <p v-if="!getDayData(weekday - 1).workoutId" class="flex items-center gap-1 text-xs text-yellow-400/80 mt-1.5 pl-1">
                             <IconAlertCircle class="size-3 shrink-0" />
                             Kein Workout ausgewählt
+                        </p>
+                    </div>
+
+                    <!-- Cardio exercise selector -->
+                    <div v-else-if="getDayMode(weekday - 1) === 'cardio'" class="px-4 pb-4">
+                        <div class="relative">
+                            <select
+                                :value="getDayData(weekday - 1).cardioExerciseId ?? ''"
+                                @change="setCardioExercise(weekday - 1, ($event.target as HTMLSelectElement).value)"
+                                class="w-full bg-surface border rounded-xl px-3 py-2.5 pr-8 text-sm outline-none appearance-none cursor-pointer transition-colors"
+                                :class="getDayData(weekday - 1).cardioExerciseId
+                                    ? 'border-border text-text focus:border-primary-500'
+                                    : 'border-yellow-500/40 text-text-muted focus:border-yellow-500'"
+                            >
+                                <option value="">Cardio-Übung wählen…</option>
+                                <option v-for="e in allCardioExercises" :key="e.id" :value="e.id">
+                                    {{ e.name }}
+                                </option>
+                            </select>
+                            <IconChevronDown class="absolute right-2.5 top-1/2 -translate-y-1/2 size-4 text-text-muted pointer-events-none" />
+                        </div>
+                        <p v-if="!getDayData(weekday - 1).cardioExerciseId" class="flex items-center gap-1 text-xs text-yellow-400/80 mt-1.5 pl-1">
+                            <IconAlertCircle class="size-3 shrink-0" />
+                            Keine Cardio-Übung ausgewählt
                         </p>
                     </div>
                 </div>

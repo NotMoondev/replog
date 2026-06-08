@@ -74,8 +74,8 @@ function restoreDraft(): boolean {
         isRestoring = true
         const elapsedMs = (draft.elapsedSeconds ?? 0) * 1000
         sessionStartTime.value = Date.now() - elapsedMs
-        localData.value = draft.localData
-        addedExercises.value = draft.addedExercises ?? []
+        if (Array.isArray(draft.localData)) localData.value = draft.localData
+        if (Array.isArray(draft.addedExercises)) addedExercises.value = draft.addedExercises
         if (typeof draft.timerEndTime === 'number') {
             timer.resumeFromEndTime(draft.timerEndTime)
         }
