@@ -48,11 +48,11 @@ async function handlePermanentDelete(id: string) {
             <h1 class="text-2xl font-semibold">Workouts</h1>
             <div class="flex items-center gap-2">
                 <NuxtLink
-                    to="/exercises"
+                    to="/plan"
                     class="flex items-center justify-center size-9 bg-surface hover:bg-surface-hover border border-border rounded-xl transition-colors text-text-muted hover:text-text"
-                    title="Übungsbibliothek"
+                    title="Trainingspläne"
                 >
-                    <IconDumbbell class="size-4" />
+                    <IconCalendar class="size-4" />
                 </NuxtLink>
                 <button
                     @click="showArchiveDrawer = true"

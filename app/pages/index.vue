@@ -395,6 +395,15 @@ onMounted(async () => {
                     </span>
                 </div>
             </div>
+            <!-- View plan button -->
+            <div v-if="planStore.activePlan" class="flex justify-center">
+                <NuxtLink
+                    :to="`/plan/${planStore.activePlan.id}`"
+                    class="w-full bg-surface hover:bg-surface-hover border border-border text-text text-center rounded-xl py-2 px-4 font-semibold text-sm transition-colors"
+                >
+                    Trainingsplan anzeigen
+                </NuxtLink>
+            </div>
         </div>
 
         <!-- Weekly metrics -->

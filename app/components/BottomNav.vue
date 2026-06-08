@@ -49,12 +49,12 @@ function isActive(path: string): boolean {
             </NuxtLink>
 
             <NuxtLink
-                to="/plan"
+                to="/exercises"
                 class="flex-1 flex flex-col items-center py-3 gap-0.5 transition-colors"
-                :class="isActive('/plan') ? 'text-primary-500' : 'text-text-muted'"
+                :class="isActive('/exercises') ? 'text-primary-500' : 'text-text-muted'"
             >
-                <IconCalendar class="size-5" />
-                <span class="text-[10px] font-medium">Plan</span>
+                <IconListChecks class="size-5" />
+                <span class="text-[10px] font-medium">Übungen</span>
             </NuxtLink>
 
             <NuxtLink
