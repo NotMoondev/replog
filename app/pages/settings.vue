@@ -48,6 +48,24 @@ async function toggleTimerNotification() {
     }
 }
 
+const storagePersisted = ref<boolean | null>(null)
+onMounted(async () => {
+    if (navigator.storage?.persisted) {
+        storagePersisted.value = await navigator.storage.persisted()
+    }
+})
+
+async function requestPersistence() {
+    if (!navigator.storage?.persist) return
+    const result = await navigator.storage.persist()
+    storagePersisted.value = result
+    if (result) {
+        addToast('Persistenter Speicher aktiviert.')
+    } else {
+        addToast('Persistenter Speicher wurde nicht gewährt.', 'error')
+    }
+}
+
 const themeOptions = [
     { value: 'dark', label: 'Dunkel', icon: 'IconMoon' },
     { value: 'light', label: 'Hell', icon: 'IconSun' },
@@ -185,6 +203,33 @@ async function handleImport(event: Event) {
                     />
                 </button>
             </div>
+        </div>
+
+        <!-- Storage Persistence -->
+        <div class="bg-card border border-border rounded-2xl p-4 space-y-3">
+            <div>
+                <h2 class="font-medium">Datenpersistenz</h2>
+                <p class="text-sm text-text-muted mt-1">Verhindert, dass der Browser IndexedDB-Daten bei Speicherknappheit automatisch löscht.</p>
+            </div>
+            <div v-if="storagePersisted === null" class="text-sm text-text-muted">Nicht unterstützt</div>
+            <template v-else>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2 text-sm font-medium">
+                        <span
+                            class="size-2 rounded-full"
+                            :class="storagePersisted ? 'bg-green-500' : 'bg-yellow-500'"
+                        />
+                        {{ storagePersisted ? 'Persistenter Speicher aktiv' : 'Speicher nicht persistent' }}
+                    </div>
+                    <button
+                        v-if="!storagePersisted"
+                        @click="requestPersistence"
+                        class="text-xs px-3 py-1.5 bg-primary-500 text-white rounded-lg font-medium transition-colors hover:bg-primary-600"
+                    >
+                        Aktivieren
+                    </button>
+                </div>
+            </template>
         </div>
 
         <!-- Data Backup -->
